@@ -1,0 +1,147 @@
+/* ==========================================================================
+   Certificate — /certificates/:courseId
+   The certificate is a fixed A4-landscape sheet that scales with its
+   container (container query units), so it reads like a document on any screen.
+   ========================================================================== */
+.cert-page { max-width: 1100px; margin: 0 auto; display: flex; flex-direction: column; gap: 22px; }
+.cert-top-btn { min-height: 44px; }
+@media (max-width: 600px) { .cert-top-btn__text { display: none; } }
+
+.cert-empty { display: flex; flex-direction: column; align-items: center; gap: 12px; }
+.cert-empty .edu-muted { margin: 0 0 4px; max-width: 46ch; }
+.cert-empty__bar { width: min(100%, 320px); display: flex; flex-direction: column; gap: 8px; margin-bottom: 8px; }
+.cert-empty__actions { display: flex; flex-wrap: wrap; gap: 14px; justify-content: center; }
+
+.cert-toolbar { display: flex; justify-content: space-between; align-items: center; gap: 14px; flex-wrap: wrap; }
+.cert-toolbar__note { margin: 0; font-size: 0.85rem; color: var(--ink-2); display: flex; align-items: center; gap: 8px; }
+.cert-toolbar__note i { color: var(--accent); }
+.cert-toolbar__actions { display: flex; gap: 12px; flex-wrap: wrap; }
+.cert-toolbar__actions .edu-btn { min-height: 44px; }
+
+.cert-stage { container-type: inline-size; }
+
+.cert {
+  aspect-ratio: 297 / 210;
+  width: 100%;
+  background: var(--card);
+  color: var(--ink);
+  border: 1px solid var(--line);
+  padding: 2.2cqw;
+  position: relative;
+  overflow: hidden;
+}
+.cert__frame {
+  height: 100%;
+  border: 0.25cqw solid var(--accent);
+  outline: 0.1cqw solid var(--accent);
+  outline-offset: -0.9cqw;
+  padding: 3cqw 4.4cqw 2.2cqw;
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+
+.cert__head { display: flex; justify-content: space-between; align-items: center; gap: 2cqw; }
+.cert__brand {
+  display: inline-flex; align-items: center; gap: 1cqw;
+  font-family: var(--font-display); font-weight: 800; font-size: 1.9cqw; letter-spacing: -0.02em;
+}
+.cert__brand svg { width: 3cqw; height: 3cqw; }
+.cert__brand em { font-family: var(--font-serif); font-style: italic; font-weight: 400; color: var(--accent); }
+.cert__kicker { font-size: 1cqw; font-weight: 700; letter-spacing: 0.22em; text-transform: uppercase; color: var(--muted); }
+
+.cert__body { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 0.9cqw; min-height: 0; }
+.cert__eyebrow {
+  margin: 0 0 1.2cqw; font-family: var(--font-display); font-weight: 800; text-transform: uppercase;
+  font-size: 3.6cqw; letter-spacing: -0.02em; line-height: 1;
+}
+.cert__intro { margin: 0; font-family: var(--font-serif); font-style: italic; font-size: 1.8cqw; color: var(--ink-2); }
+.cert__name {
+  margin: 0.4cqw 0 0.8cqw;
+  min-width: 46cqw;
+  min-height: 6.2cqw;
+  padding: 0 2cqw 0.6cqw;
+  border-bottom: 0.12cqw solid var(--line);
+  font-family: var(--font-display); font-weight: 800; letter-spacing: -0.035em;
+  font-size: 5cqw; line-height: 1.1; color: var(--ink);
+  overflow-wrap: anywhere;
+}
+.cert__course {
+  margin: 0.4cqw 0 0;
+  font-family: var(--font-serif); font-style: italic; font-weight: 400;
+  font-size: 3.4cqw; line-height: 1.1; color: var(--accent); max-width: 80cqw;
+}
+.cert__detail { margin: 0.6cqw 0 0; font-size: 1.1cqw; font-weight: 600; letter-spacing: 0.18em; text-transform: uppercase; color: var(--muted); }
+
+.cert__foot { display: grid; grid-template-columns: 1fr auto 1fr; align-items: end; gap: 3cqw; margin-top: 1.4cqw; }
+.cert__sign { display: flex; flex-direction: column; align-items: flex-start; gap: 0.6cqw; }
+.cert__sign--right { align-items: flex-end; text-align: right; }
+.cert__signature { font-family: var(--font-serif); font-style: italic; font-size: 2.3cqw; line-height: 1; color: var(--ink); }
+.cert__date { font-family: var(--font-display); font-weight: 700; font-size: 1.6cqw; line-height: 1; }
+.cert__rule { width: 22cqw; max-width: 100%; height: 0.1cqw; background: var(--line); }
+.cert__role { font-size: 0.95cqw; font-weight: 700; letter-spacing: 0.2em; text-transform: uppercase; color: var(--muted); }
+
+.cert__seal {
+  width: 10cqw; height: 10cqw; border-radius: 50%;
+  border: 0.25cqw solid var(--accent);
+  display: grid; place-items: center;
+  background: var(--accent-soft);
+}
+.cert__seal-inner {
+  width: 8cqw; height: 8cqw; border-radius: 50%;
+  border: 0.1cqw dashed var(--accent);
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.3cqw;
+  color: var(--accent);
+}
+.cert__seal-inner i { font-size: 3cqw; line-height: 1; }
+.cert__seal-inner small { font-size: 0.85cqw; font-weight: 800; letter-spacing: 0.22em; text-transform: uppercase; }
+
+.cert__verify {
+  margin: 1.6cqw 0 0; text-align: center;
+  font-size: 0.95cqw; letter-spacing: 0.06em; color: var(--muted);
+}
+.cert__verify strong { color: var(--ink); letter-spacing: 0.12em; }
+
+/* Narrow screens: the sheet turns portrait with readable type instead of shrinking */
+@container (max-width: 620px) {
+  .cert { aspect-ratio: auto; padding: 10px; }
+  .cert__frame { border-width: 2px; outline-width: 1px; outline-offset: -7px; padding: 26px 20px 18px; gap: 4px; }
+  .cert__head { flex-direction: column; gap: 8px; }
+  .cert__brand { font-size: 1.05rem; gap: 8px; }
+  .cert__brand svg { width: 24px; height: 24px; }
+  .cert__kicker { font-size: 0.6rem; }
+  .cert__body { padding: 26px 0 18px; gap: 6px; }
+  .cert__eyebrow { font-size: 1.45rem; margin-bottom: 8px; }
+  .cert__intro { font-size: 1rem; }
+  .cert__name { font-size: 1.9rem; min-width: 80%; min-height: 2.6rem; padding: 0 6px 6px; border-bottom-width: 1px; margin: 4px 0 8px; }
+  .cert__course { font-size: 1.5rem; max-width: 100%; }
+  .cert__detail { font-size: 0.62rem; letter-spacing: 0.14em; margin-top: 6px; }
+  .cert__foot { grid-template-columns: 1fr 1fr; gap: 18px 14px; margin-top: 8px; }
+  .cert__seal { grid-column: 1 / -1; grid-row: 1; justify-self: center; width: 76px; height: 76px; border-width: 2px; }
+  .cert__seal-inner { width: 60px; height: 60px; border-width: 1px; gap: 2px; }
+  .cert__seal-inner i { font-size: 1.4rem; }
+  .cert__seal-inner small { font-size: 0.5rem; }
+  .cert__signature { font-size: 1.15rem; }
+  .cert__date { font-size: 0.9rem; }
+  .cert__rule { width: 100%; height: 1px; }
+  .cert__role { font-size: 0.56rem; letter-spacing: 0.16em; }
+  .cert__verify { font-size: 0.66rem; margin-top: 18px; line-height: 1.5; }
+}
+@media (max-width: 560px) {
+  .cert-toolbar__actions { width: 100%; }
+  .cert-toolbar__actions .edu-btn { flex: 1 1 auto; }
+}
+
+/* ---------- Print: just the sheet, one A4 landscape page ---------- */
+@media print {
+  @page { size: A4 landscape; margin: 0; }
+  html, body { background: var(--card) !important; }
+  body::after { display: none !important; }
+  .app-shell { display: block; min-height: 0; }
+  .app-shell__side, .app-shell__top, .app-shell__scrim, .cert-toolbar, .edu-toasts { display: none !important; }
+  .app-shell__content { padding: 0 !important; }
+  .cert-page { max-width: none; margin: 0; gap: 0; }
+  .cert-stage { width: 297mm; overflow: visible; margin: 0; padding: 0; container-type: inline-size; }
+  .cert { width: 297mm; height: 210mm; border: 0; aspect-ratio: auto; }
+  .cert, .cert * { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+}

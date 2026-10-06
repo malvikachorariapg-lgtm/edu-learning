@@ -3,22 +3,56 @@ services:
     name: imarticus-lms-backend
     env: node
     region: singapore
+    # Free plan sleeps and has 0.1 CPU - use Standard (1 CPU / 2GB) or higher for 2000+ users
     plan: free
-    buildCommand: npm install
+    buildCommand: npm ci --omit=dev
     startCommand: npm start
+    healthCheckPath: /api/health
     envVars:
       - key: NODE_ENV
         value: production
-      - key: MONGO_URI
-        value: mongodb+srv://vinaywbackup_db_user:vinayjain@priject.6tsvkwd.mongodb.net/imarticus-lms?retryWrites=true&w=majority&appName=Priject
       - key: PORT
         value: 5000
+      # Number of cluster workers (match the instance's CPU count)
+      - key: WEB_CONCURRENCY
+        value: 2
+      # Comma-separated list of allowed frontend origins
       - key: FRONTEND_URL
         value: https://imarticus-lms.netlify.app
+      # Secrets - set these in the Render Dashboard (never commit values)
+      - key: MONGO_URI
+        sync: false
+      - key: JWT_SECRET
+        sync: false
+      - key: REDIS_URL
+        sync: false
       - key: RAZORPAY_KEY_ID
-        value: rzp_test_1hvQh7HTjEfHCo
+        sync: false
       - key: RAZORPAY_KEY_SECRET
-        value: 77GV69Z4HNFS28RW1TH8g89n
+        sync: false
       - key: RAZORPAY_WEBHOOK_SECRET
-        value: iamdevtinder
-      # Azure OpenAI variables are configured in Render Dashboard Environment tab
+        sync: false
+      # Vertex AI (Gemini) document summarization
+      - key: FI_VERTEX_CREDENTIALS_JSON
+        sync: false
+      - key: FI_VERTEX_PROJECT
+        sync: false
+      - key: FI_VERTEX_LOCATION
+        sync: false
+      - key: FI_REASONING_MODEL
+        sync: false
+      - key: FI_AI_ENABLED
+        sync: false
+      - key: FI_VISION_ENABLED
+        sync: false
+      # OpenTelemetry (point at your collector / vendor OTLP endpoint)
+      - key: OTEL_SERVICE_NAME
+        value: edu-learning-api
+      - key: OTEL_EXPORTER_OTLP_ENDPOINT
+        sync: false
+      - key: OTEL_EXPORTER_OTLP_HEADERS
+        sync: false
+      - key: OTEL_TRACES_SAMPLER
+        value: parentbased_traceidratio
+      - key: OTEL_TRACES_SAMPLER_ARG
+        value: "0.1"

@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getCoursesForAdmin, uploadDocument, createCourse, updateCourse, deleteCourse, getAnalytics, getStudentProgress } from '../services/api';
+import AppShell from '../components/AppShell';
+import { CATEGORIES } from '../brand';
 import './AdminDashboard.css';
 
 const AdminDashboard = () => {
@@ -42,7 +44,7 @@ const AdminDashboard = () => {
   const [courseForm, setCourseForm] = useState({
     title: '',
     description: '',
-    instructor: 'Imarticus Learning',
+    instructor: 'Edu Learning',
     price: 500,
     category: 'technology',
     duration: '',
@@ -50,11 +52,14 @@ const AdminDashboard = () => {
   });
 
   useEffect(() => {
+    // Non-admins are redirected by the check above; don't hit admin-only APIs
+    if (JSON.parse(localStorage.getItem('user') || 'null')?.role !== 'admin') return;
     fetchCourses();
     if (activeTab === 'analytics') {
       fetchAnalytics();
       fetchStudentProgress();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab]);
 
   const fetchCourses = async () => {
@@ -179,12 +184,6 @@ const AdminDashboard = () => {
     }
   };
 
-  const handleLogout = () => {
-    localStorage.removeItem('user');
-    localStorage.removeItem('token');
-    navigate('/auth');
-  };
-
   const handleDeleteCourse = async (courseId) => {
     if (!window.confirm('Are you sure you want to delete this course? This action cannot be undone.')) {
       return;
@@ -210,7 +209,7 @@ const AdminDashboard = () => {
     setCourseForm({
       title: course.title,
       description: course.description,
-      instructor: course.instructor || 'Imarticus Learning',
+      instructor: course.instructor || 'Edu Learning',
       price: course.price || 500,
       category: course.category || 'technology',
       duration: course.duration || '',
@@ -224,7 +223,7 @@ const AdminDashboard = () => {
     setCourseForm({
       title: '',
       description: '',
-      instructor: 'Imarticus Learning',
+      instructor: 'Edu Learning',
       price: 500,
       category: 'technology',
       duration: '',
@@ -274,686 +273,585 @@ const AdminDashboard = () => {
   const getCourse = () => courses.find(c => c._id === selectedCourse);
   const getModule = () => getCourse()?.modules.find(m => m._id === selectedModule);
 
+
+  // ---- Presentation helpers (derived, read-only) ----
+  const lessonCount = (course) =>
+    course.modules?.reduce((acc, m) => acc + (m.lessons?.length || 0), 0) || 0;
+  const docCount = (course) =>
+    course.modules?.reduce(
+      (acc, m) => acc + (m.lessons?.filter((l) => l.document).length || 0), 0
+    ) || 0;
+  const totalModules = courses.reduce((a, c) => a + (c.modules?.length || 0), 0);
+  const totalLessons = courses.reduce((a, c) => a + lessonCount(c), 0);
+  const totalDocs = courses.reduce((a, c) => a + docCount(c), 0);
+  const pad = (n) => String(n).padStart(2, '0');
+  const tone = (pct) => (pct >= 100 ? 'accent' : pct >= 70 ? 'forest' : pct >= 40 ? 'ochre' : 'danger');
+  const categoryLabel = (key) => CATEGORIES.find((c) => c.key === key)?.label || key;
+  const trendMax = Math.max(1, ...(analyticsData?.enrollmentTrends || []).map((t) => t.enrollments));
+
+  const sections = {
+    manage: { eyebrow: 'Operations / Catalogue', title: 'Courses' },
+    upload: { eyebrow: 'Operations / Materials', title: 'Lesson documents' },
+    analytics: { eyebrow: 'Operations / Reporting', title: 'Analytics' }
+  };
+
+  const nav = [
+    { key: 'manage', label: 'Courses', active: activeTab === 'manage', onClick: () => setActiveTab('manage') },
+    { key: 'upload', label: 'Upload documents', active: activeTab === 'upload', onClick: () => setActiveTab('upload') },
+    { key: 'analytics', label: 'Analytics', active: activeTab === 'analytics', onClick: () => setActiveTab('analytics') },
+    { key: 'site', label: 'View site', to: '/courses' }
+  ];
+
+  const topActions =
+    activeTab === 'manage' ? (
+      <button className="edu-btn edu-btn--accent edu-btn--sm" onClick={handleAddCourse}>
+        New course
+      </button>
+    ) : activeTab === 'analytics' ? (
+      <button
+        className="edu-btn edu-btn--ghost edu-btn--sm"
+        onClick={() => { fetchAnalytics(); fetchStudentProgress(); }}
+        disabled={analyticsLoading}
+      >
+        Refresh
+      </button>
+    ) : null;
+
   return (
-    <div className="admin-dashboard">
-      {/* Admin Navigation */}
-      <nav className="navbar navbar-dark bg-dark">
-        <div className="container-fluid">
-          <div className="d-flex align-items-center">
-            <button className="btn btn-link text-white me-3" onClick={() => navigate('/')}>
-              ← Home
-            </button>
-            <h5 className="mb-0 text-white">Admin Dashboard</h5>
-          </div>
-          <div className="d-flex align-items-center">
-            <button className="btn btn-outline-light btn-sm me-2" onClick={() => navigate('/lms')}>
-              View LMS
-            </button>
-            <button className="btn btn-outline-light btn-sm" onClick={handleLogout}>
-              Logout
-            </button>
-          </div>
+    <AppShell
+      nav={nav}
+      eyebrow={sections[activeTab].eyebrow}
+      title={sections[activeTab].title}
+      actions={topActions}
+      sidebarExtra={
+        <div className="adm-side-note">
+          <p className="edu-label">Console</p>
+          <p>Catalogue, lesson materials and learner reporting for {courses.length} programs.</p>
         </div>
-      </nav>
-
-      <div className="container-fluid">
-        <div className="row">
-          {/* Sidebar */}
-          <div className="col-md-3 sidebar-admin">
-            <div className="admin-menu">
-              <h6 className="text-muted mb-3">ADMIN MENU</h6>
-              <button 
-                className={`menu-item ${activeTab === 'upload' ? 'active' : ''}`}
-                onClick={() => setActiveTab('upload')}
-              >
-                <i className="bi bi-cloud-upload me-2"></i>Upload Documents
-              </button>
-              <button 
-                className={`menu-item ${activeTab === 'manage' ? 'active' : ''}`}
-                onClick={() => setActiveTab('manage')}
-              >
-                <i className="bi bi-book me-2"></i>Manage Courses
-              </button>
-              <button 
-                className={`menu-item ${activeTab === 'analytics' ? 'active' : ''}`}
-                onClick={() => setActiveTab('analytics')}
-              >
-                <i className="bi bi-graph-up me-2"></i>Analytics
-              </button>
-            </div>
+      }
+    >
+      <div className="adm">
+        {message && (
+          <div
+            className={`edu-alert ${messageType === 'success' ? 'edu-alert--success' : 'edu-alert--error'} adm-alert`}
+            role="alert"
+          >
+            <span className="adm-alert__text">{message}</span>
+            <button type="button" className="adm-alert__close" onClick={() => setMessage('')} aria-label="Dismiss">
+              <i className="bi bi-x-lg"></i>
+            </button>
           </div>
+        )}
 
-          {/* Main Content */}
-          <div className="col-md-9 main-admin-content">
-            {message && (
-              <div className={`alert alert-${messageType} alert-dismissible fade show`} role="alert">
-                {message}
-                <button type="button" className="btn-close" onClick={() => setMessage('')}></button>
+        {/* ---------------- Courses ---------------- */}
+        {activeTab === 'manage' && (
+          <section>
+            <div className="adm-stats">
+              <div className="adm-stat">
+                <p className="edu-label">Courses</p>
+                <div className="adm-stat__value">{pad(courses.length)}</div>
               </div>
-            )}
-
-            {/* Upload Tab */}
-            {activeTab === 'upload' && (
-              <div className="content-section">
-                <h3 className="mb-4">
-                  <i className="bi bi-cloud-upload me-2"></i>Upload Course Documents
-                </h3>
-                <p className="text-muted">Upload PDF documents to enhance lessons with AI-powered summaries</p>
-
-                <form onSubmit={handleSubmit} className="upload-form">
-                  <div className="row">
-                    <div className="col-md-6 mb-3">
-                      <label className="form-label">Select Course *</label>
-                      <select
-                        className="form-select"
-                        value={selectedCourse}
-                        onChange={handleCourseChange}
-                        required
-                      >
-                        <option value="">Choose a course...</option>
-                        {courses.map(course => (
-                          <option key={course._id} value={course._id}>
-                            {course.title}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-
-                    <div className="col-md-6 mb-3">
-                      <label className="form-label">Select Module *</label>
-                      <select
-                        className="form-select"
-                        value={selectedModule}
-                        onChange={handleModuleChange}
-                        required
-                        disabled={!selectedCourse}
-                      >
-                        <option value="">Choose a module...</option>
-                        {getCourse()?.modules.map(module => (
-                          <option key={module._id} value={module._id}>
-                            {module.title}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-
-                    <div className="col-md-6 mb-3">
-                      <label className="form-label">Select Lesson *</label>
-                      <select
-                        className="form-select"
-                        value={selectedLesson}
-                        onChange={(e) => setSelectedLesson(e.target.value)}
-                        required
-                        disabled={!selectedModule}
-                      >
-                        <option value="">Choose a lesson...</option>
-                        {getModule()?.lessons.map(lesson => (
-                          <option key={lesson._id} value={lesson._id}>
-                            {lesson.title} {lesson.document && '✓'}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-
-                    <div className="col-md-6 mb-3">
-                      <label className="form-label">Upload PDF *</label>
-                      <input
-                        type="file"
-                        className="form-control"
-                        id="fileInput"
-                        accept="application/pdf"
-                        onChange={handleFileChange}
-                        required
-                      />
-                      {file && (
-                        <small className="text-success">
-                          ✓ {file.name} ({(file.size / 1024 / 1024).toFixed(2)} MB)
-                        </small>
-                      )}
-                    </div>
-                  </div>
-
-                  <button
-                    type="submit"
-                    className="btn btn-success"
-                    disabled={loading || !file}
-                  >
-                    {loading ? (
-                      <>
-                        <span className="spinner-border spinner-border-sm me-2"></span>
-                        Uploading...
-                      </>
-                    ) : (
-                      'Upload Document'
-                    )}
-                  </button>
-                </form>
+              <div className="adm-stat">
+                <p className="edu-label">Modules</p>
+                <div className="adm-stat__value">{pad(totalModules)}</div>
               </div>
-            )}
+              <div className="adm-stat">
+                <p className="edu-label">Lessons</p>
+                <div className="adm-stat__value">{pad(totalLessons)}</div>
+              </div>
+              <div className="adm-stat">
+                <p className="edu-label">Documents attached</p>
+                <div className="adm-stat__value">{pad(totalDocs)}</div>
+                <div className="adm-stat__note">of {totalLessons} lessons</div>
+              </div>
+            </div>
 
-            {/* Manage Courses Tab */}
-            {activeTab === 'manage' && (
-              <div className="content-section">
-                <div className="d-flex justify-content-between align-items-center mb-4">
-                  <h3 className="mb-0">📚 Manage Courses</h3>
-                  <button className="btn btn-success" onClick={handleAddCourse}>
-                    + Add New Course
-                  </button>
-                </div>
-                
-                <div className="courses-list">
-                  {courses.map(course => (
-                    <div key={course._id} className="course-item-admin card mb-3">
-                      <div className="card-body">
-                        <div className="d-flex justify-content-between align-items-start">
-                          <div className="flex-grow-1">
-                            <h5>{course.title}</h5>
-                            <p className="text-muted mb-2">
-                              {course.modules?.length || 0} Modules • 
-                              {course.modules?.reduce((acc, m) => acc + (m.lessons?.length || 0), 0) || 0} Lessons
-                            </p>
-                            <div className="d-flex gap-2 flex-wrap">
-                              <span className="badge bg-success">₹{course.price || 500}</span>
-                              <span className="badge bg-info">{course.category || 'technology'}</span>
-                              <span className="badge bg-secondary">{course.instructor || 'Imarticus'}</span>
-                            </div>
-                          </div>
-                          <div className="d-flex gap-2">
-                            <button 
-                              className="btn btn-sm btn-outline-primary" 
-                              onClick={() => handleEditCourse(course)}
-                            >
-                               Edit
+            <div className="adm-section-head">
+              <span className="edu-label edu-label--accent">01</span>
+              <h2 className="adm-section-head__title">Catalogue</h2>
+              <span className="edu-label adm-section-head__meta">{courses.length} records</span>
+            </div>
+
+            {courses.length === 0 ? (
+              <div className="edu-empty">
+                <h3 className="edu-h3">No courses yet.</h3>
+                <p className="edu-muted">Create the first program to start building the catalogue.</p>
+                <button className="edu-btn edu-btn--accent" onClick={handleAddCourse}>New course</button>
+              </div>
+            ) : (
+              <div className="adm-table-wrap adm-panel">
+                <table className="edu-table adm-table adm-table--stack adm-table--courses">
+                  <thead>
+                    <tr>
+                      <th className="adm-col-num">#</th>
+                      <th>Course</th>
+                      <th>Category</th>
+                      <th className="adm-num">Modules</th>
+                      <th className="adm-num">Lessons</th>
+                      <th className="adm-num">Docs</th>
+                      <th className="adm-num">Price</th>
+                      <th className="adm-col-actions"><span className="visually-hidden">Actions</span></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {courses.map((course, i) => (
+                      <tr key={course._id}>
+                        <td className="adm-col-num adm-mono">{pad(i + 1)}</td>
+                        <td className="adm-course-cell">
+                          <strong>{course.title}</strong>
+                          <span>{course.instructor || 'Edu Learning'}</span>
+                        </td>
+                        <td data-label="Category">
+                          <span className="edu-tag edu-tag--soft">{categoryLabel(course.category || 'technology')}</span>
+                        </td>
+                        <td className="adm-num adm-mono" data-label="Modules">{course.modules?.length || 0}</td>
+                        <td className="adm-num adm-mono" data-label="Lessons">{lessonCount(course)}</td>
+                        <td className="adm-num adm-mono" data-label="Docs">{docCount(course)}</td>
+                        <td className="adm-num adm-mono" data-label="Price">₹{course.price || 500}</td>
+                        <td className="adm-col-actions">
+                          <div className="adm-row-actions">
+                            <button className="edu-btn edu-btn--ghost edu-btn--sm" onClick={() => handleEditCourse(course)}>
+                              Edit
                             </button>
-                            <button 
-                              className="btn btn-sm btn-outline-danger"
-                              onClick={() => handleDeleteCourse(course._id)}
-                            >
-                               Delete
+                            <button className="edu-btn edu-btn--danger edu-btn--sm" onClick={() => handleDeleteCourse(course._id)}>
+                              Delete
                             </button>
                           </div>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
             )}
+          </section>
+        )}
 
-            {/* Analytics Tab */}
-            {activeTab === 'analytics' && (
-              <div className="content-section">
-                <h3 className="mb-4">
-                  <i className="bi bi-graph-up me-2"></i>Analytics Dashboard
-                </h3>
-                
-                {analyticsLoading ? (
-                  <div className="text-center py-5">
-                    <div className="spinner-border text-primary" role="status">
-                      <span className="visually-hidden">Loading...</span>
-                    </div>
-                    <p className="mt-3">Loading analytics data...</p>
+        {/* ---------------- Upload ---------------- */}
+        {activeTab === 'upload' && (
+          <section className="adm-upload">
+            <div className="adm-upload__intro">
+              <p className="edu-label edu-label--accent">Attach a PDF</p>
+              <h2 className="edu-h2">Give a lesson its <em>reading</em>.</h2>
+              <p className="edu-body">
+                Documents attached here appear inside the lesson. Learners can generate an AI summary from them.
+              </p>
+              <ol className="adm-steps">
+                <li><span>01</span>Pick the course, module and lesson.</li>
+                <li><span>02</span>Choose a PDF, 10 MB or smaller.</li>
+                <li><span>03</span>Upload. An existing document is replaced.</li>
+              </ol>
+            </div>
+
+            <form onSubmit={handleSubmit} className="edu-panel edu-pop adm-upload__form">
+              <div className="edu-panel__head">
+                <p className="edu-label edu-label--ink">Document upload</p>
+                <span className="edu-label">PDF / 10 MB max</span>
+              </div>
+              <div className="edu-panel__body">
+                <div className="edu-field">
+                  <label htmlFor="adm-course">Course</label>
+                  <select id="adm-course" className="edu-select" value={selectedCourse} onChange={handleCourseChange} required>
+                    <option value="">Choose a course...</option>
+                    {courses.map(course => (
+                      <option key={course._id} value={course._id}>{course.title}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="adm-grid-2">
+                  <div className="edu-field">
+                    <label htmlFor="adm-module">Module</label>
+                    <select
+                      id="adm-module"
+                      className="edu-select"
+                      value={selectedModule}
+                      onChange={handleModuleChange}
+                      required
+                      disabled={!selectedCourse}
+                    >
+                      <option value="">Choose a module...</option>
+                      {getCourse()?.modules.map(module => (
+                        <option key={module._id} value={module._id}>{module.title}</option>
+                      ))}
+                    </select>
                   </div>
-                ) : analyticsData ? (
-                  <>
-                    {/* Core Stats */}
-                    <div className="row mb-4">
-                      <div className="col-md-3 mb-3">
-                        <div className="card analytics-card bg-primary text-white">
-                          <div className="card-body text-center">
-                            <h2 className="display-4">{analyticsData.coreStats.totalStudents}</h2>
-                            <p className="mb-0">
-                              <i className="bi bi-people me-2"></i>Total Students
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="col-md-3 mb-3">
-                        <div className="card analytics-card bg-success text-white">
-                          <div className="card-body text-center">
-                            <h2 className="display-4">{analyticsData.coreStats.totalCourses}</h2>
-                            <p className="mb-0">
-                              <i className="bi bi-book me-2"></i>Total Courses
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="col-md-3 mb-3">
-                        <div className="card analytics-card bg-info text-white">
-                          <div className="card-body text-center">
-                            <h2 className="display-4">{analyticsData.coreStats.totalEnrollments}</h2>
-                            <p className="mb-0">
-                              <i className="bi bi-mortarboard me-2"></i>Total Enrollments
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="col-md-3 mb-3">
-                        <div className="card analytics-card bg-warning text-white">
-                          <div className="card-body text-center">
-                            <h2 className="display-4">₹{analyticsData.coreStats.totalRevenue}</h2>
-                            <p className="mb-0">
-                              <i className="bi bi-currency-rupee me-2"></i>Total Revenue
-                            </p>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
 
-                    {/* Detailed Student Progress Table */}
-                    <div className="row mb-4">
-                      <div className="col-12">
-                        <div className="card">
-                          <div className="card-header bg-primary text-white">
-                            <h5 className="mb-0">
-                              <i className="bi bi-person-check me-2"></i>Student Progress Tracker
-                            </h5>
-                          </div>
-                          <div className="card-body">
-                            {progressLoading ? (
-                              <div className="text-center py-3">
-                                <div className="spinner-border spinner-border-sm" role="status"></div>
-                                <span className="ms-2">Loading student data...</span>
-                              </div>
-                            ) : studentProgressData.length > 0 ? (
-                              <div className="table-responsive">
-                                <table className="table table-hover table-striped">
-                                  <thead className="table-dark">
-                                    <tr>
-                                      <th>Student Name</th>
-                                      <th>Email</th>
-                                      <th>Enrolled Courses</th>
-                                      <th>Avg. Completion</th>
-                                      <th>Course Details</th>
-                                    </tr>
-                                  </thead>
-                                  <tbody>
-                                    {studentProgressData.map((student) => (
-                                      <tr key={student.studentId}>
-                                        <td><strong>{student.studentName}</strong></td>
-                                        <td><small className="text-muted">{student.studentEmail}</small></td>
-                                        <td>
-                                          <span className="badge bg-info">{student.totalEnrollments}</span>
-                                        </td>
-                                        <td>
-                                          <div className="d-flex align-items-center">
-                                            <div className="progress me-2" style={{width: '100px', height: '20px'}}>
-                                              <div 
-                                                className={`progress-bar ${
-                                                  student.averageCompletion >= 70 ? 'bg-success' :
-                                                  student.averageCompletion >= 40 ? 'bg-warning' :
-                                                  'bg-danger'
-                                                }`}
-                                                style={{width: `${student.averageCompletion}%`}}
-                                              ></div>
-                                            </div>
-                                            <strong>{student.averageCompletion}%</strong>
-                                          </div>
-                                        </td>
-                                        <td>
-                                          {student.courses.length > 0 ? (
-                                            <div className="small">
-                                              {student.courses.map((course, idx) => (
-                                                <div key={idx} className="mb-1">
-                                                  <span className="text-truncate d-inline-block" style={{maxWidth: '200px'}}>
-                                                    {course.courseName}
-                                                  </span>
-                                                  <span className={`badge ms-2 ${
-                                                    course.completionPercentage >= 70 ? 'bg-success' :
-                                                    course.completionPercentage >= 40 ? 'bg-warning' :
-                                                    'bg-danger'
-                                                  }`}>
-                                                    {course.completionPercentage}%
-                                                  </span>
-                                                </div>
-                                              ))}
-                                            </div>
-                                          ) : (
-                                            <span className="text-muted">No enrollments</span>
-                                          )}
-                                        </td>
-                                      </tr>
-                                    ))}
-                                  </tbody>
-                                </table>
-                              </div>
-                            ) : (
-                              <p className="text-muted text-center">No student data available</p>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
+                  <div className="edu-field">
+                    <label htmlFor="adm-lesson">Lesson</label>
+                    <select
+                      id="adm-lesson"
+                      className="edu-select"
+                      value={selectedLesson}
+                      onChange={(e) => setSelectedLesson(e.target.value)}
+                      required
+                      disabled={!selectedModule}
+                    >
+                      <option value="">Choose a lesson...</option>
+                      {getModule()?.lessons.map(lesson => (
+                        <option key={lesson._id} value={lesson._id}>
+                          {lesson.title}{lesson.document ? ' (has document)' : ''}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
 
-                    {/* Course Popularity & Completion */}
-                    <div className="row mb-4">
-                      <div className="col-md-6">
-                        <div className="card">
-                          <div className="card-header bg-success text-white">
-                            <h5 className="mb-0">
-                              <i className="bi bi-bar-chart me-2"></i>Top 5 Popular Courses
-                            </h5>
-                          </div>
-                          <div className="card-body">
-                            {analyticsData.coursePopularity.length > 0 ? (
-                              <div className="chart-container">
-                                {analyticsData.coursePopularity.map((course, index) => (
-                                  <div key={course.courseId} className="progress-bar-item mb-3">
-                                    <div className="d-flex justify-content-between mb-1">
-                                      <span className="text-truncate" style={{maxWidth: '70%'}}>
-                                        {index + 1}. {course.courseName}
-                                      </span>
-                                      <strong>{course.enrollments} students</strong>
-                                    </div>
-                                    <div className="progress" style={{height: '25px'}}>
-                                      <div 
-                                        className="progress-bar bg-success" 
-                                        role="progressbar" 
-                                        style={{
-                                          width: `${(course.enrollments / analyticsData.coursePopularity[0].enrollments) * 100}%`
-                                        }}
-                                      >
-                                        {course.enrollments}
-                                      </div>
-                                    </div>
-                                  </div>
-                                ))}
-                              </div>
-                            ) : (
-                              <p className="text-muted">No enrollment data available</p>
-                            )}
-                          </div>
-                        </div>
-                      </div>
+                <label htmlFor="fileInput" className={`adm-drop${file ? ' has-file' : ''}`}>
+                  <input
+                    type="file"
+                    id="fileInput"
+                    accept="application/pdf"
+                    onChange={handleFileChange}
+                    required
+                  />
+                  <i className="bi bi-file-earmark-arrow-up adm-drop__icon" aria-hidden="true"></i>
+                  <span className="adm-drop__title">{file ? 'Replace file' : 'Choose a PDF'}</span>
+                  <span className="edu-label">Click to browse</span>
+                </label>
 
-                      {/* Course Completion Rates */}
-                      <div className="col-md-6">
-                        <div className="card">
-                          <div className="card-header bg-info text-white">
-                            <h5 className="mb-0">
-                              <i className="bi bi-check-circle me-2"></i>Course Completion Rates
-                            </h5>
-                          </div>
-                          <div className="card-body" style={{maxHeight: '400px', overflowY: 'auto'}}>
-                            {analyticsData.studentProgress.length > 0 ? (
-                              analyticsData.studentProgress.map((progress) => (
-                                <div key={progress.courseId} className="mb-3">
-                                  <div className="d-flex justify-content-between mb-1">
-                                    <span className="text-truncate" style={{maxWidth: '60%'}}>
-                                      {progress.courseName}
-                                    </span>
-                                    <span className="badge bg-primary">
-                                      {progress.completionPercentage}%
-                                    </span>
-                                  </div>
-                                  <div className="progress" style={{height: '20px'}}>
-                                    <div 
-                                      className="progress-bar progress-bar-striped progress-bar-animated bg-info" 
-                                      role="progressbar" 
-                                      style={{width: `${progress.completionPercentage}%`}}
-                                    >
-                                      {progress.completionPercentage}%
-                                    </div>
-                                  </div>
-                                  <small className="text-muted">
-                                    Avg: {progress.avgCompletedLessons}/{progress.totalLessons} lessons
-                                  </small>
+                {file && (
+                  <div className="adm-file-row">
+                    <span className="adm-file-row__name">{file.name}</span>
+                    <span className="adm-file-row__size">{(file.size / 1024 / 1024).toFixed(2)} MB</span>
+                    <span className="edu-tag edu-tag--forest">Ready</span>
+                  </div>
+                )}
+
+                <button type="submit" className="edu-btn edu-btn--accent edu-btn--lg edu-btn--block adm-upload__submit" disabled={loading || !file}>
+                  {loading ? (<><span className="edu-spinner adm-spinner-sm"></span>Uploading...</>) : 'Upload document'}
+                </button>
+              </div>
+            </form>
+          </section>
+        )}
+
+        {/* ---------------- Analytics ---------------- */}
+        {activeTab === 'analytics' && (
+          <section>
+            {analyticsLoading ? (
+              <div className="edu-loading adm-loading">
+                <div className="edu-spinner"></div>
+                <p className="edu-label">Loading analytics</p>
+              </div>
+            ) : analyticsData ? (
+              <>
+                <div className="adm-stats">
+                  <div className="adm-stat">
+                    <p className="edu-label">Students</p>
+                    <div className="adm-stat__value">{analyticsData.coreStats.totalStudents}</div>
+                  </div>
+                  <div className="adm-stat">
+                    <p className="edu-label">Courses</p>
+                    <div className="adm-stat__value">{analyticsData.coreStats.totalCourses}</div>
+                  </div>
+                  <div className="adm-stat">
+                    <p className="edu-label">Enrollments</p>
+                    <div className="adm-stat__value">{analyticsData.coreStats.totalEnrollments}</div>
+                  </div>
+                  <div className="adm-stat adm-stat--accent">
+                    <p className="edu-label">Revenue</p>
+                    <div className="adm-stat__value">₹{Number(analyticsData.coreStats.totalRevenue || 0).toLocaleString('en-IN', { maximumFractionDigits: 0 })}</div>
+                  </div>
+                </div>
+
+                {/* Student progress */}
+                <div className="adm-section-head">
+                  <span className="edu-label edu-label--accent">01</span>
+                  <h2 className="adm-section-head__title">Student progress</h2>
+                  <span className="edu-label adm-section-head__meta">{studentProgressData.length} learners</span>
+                </div>
+                {progressLoading ? (
+                  <div className="adm-inline-loading"><span className="edu-spinner adm-spinner-sm"></span><span className="edu-label">Loading student data</span></div>
+                ) : studentProgressData.length > 0 ? (
+                  <div className="adm-table-wrap adm-panel">
+                    <table className="edu-table adm-table adm-table--stack">
+                      <thead>
+                        <tr>
+                          <th>Student</th>
+                          <th className="adm-num">Enrolled</th>
+                          <th>Avg. completion</th>
+                          <th>Courses</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {studentProgressData.map((student) => (
+                          <tr key={student.studentId}>
+                            <td className="adm-course-cell">
+                              <strong>{student.studentName}</strong>
+                              <span className="adm-mono">{student.studentEmail}</span>
+                            </td>
+                            <td className="adm-num adm-mono" data-label="Enrolled">{student.totalEnrollments}</td>
+                            <td data-label="Avg. completion">
+                              <div className="adm-meter">
+                                <div className="edu-progress adm-meter__bar">
+                                  <div className={`edu-progress__bar adm-fill--${tone(student.averageCompletion)}`} style={{ width: `${student.averageCompletion}%` }}></div>
                                 </div>
-                              ))
-                            ) : (
-                              <p className="text-muted">No progress data available</p>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Recent Activity */}
-                    <div className="row mb-4">
-                      <div className="col-md-6">
-                        <div className="card">
-                          <div className="card-header bg-secondary text-white">
-                            <h5 className="mb-0">
-                              <i className="bi bi-clock-history me-2"></i>Recently Registered Students
-                            </h5>
-                          </div>
-                          <div className="card-body">
-                            {analyticsData.recentActivity.length > 0 ? (
-                              <div className="table-responsive">
-                                <table className="table table-hover">
-                                  <thead>
-                                    <tr>
-                                      <th>Name</th>
-                                      <th>Email</th>
-                                      <th>Enrolled Courses</th>
-                                      <th>Joined</th>
-                                    </tr>
-                                  </thead>
-                                  <tbody>
-                                    {analyticsData.recentActivity.map((student) => (
-                                      <tr key={student._id}>
-                                        <td>{student.name}</td>
-                                        <td><small>{student.email}</small></td>
-                                        <td>
-                                          <span className="badge bg-primary">
-                                            {student.enrolledCoursesCount}
-                                          </span>
-                                        </td>
-                                        <td>
-                                          <small>
-                                            {new Date(student.registeredAt).toLocaleDateString()}
-                                          </small>
-                                        </td>
-                                      </tr>
-                                    ))}
-                                  </tbody>
-                                </table>
+                                <span className="adm-mono adm-meter__val">{student.averageCompletion}%</span>
                               </div>
-                            ) : (
-                              <p className="text-muted">No recent registrations</p>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Enrollment Trends */}
-                      <div className="col-md-6">
-                        <div className="card">
-                          <div className="card-header bg-warning text-dark">
-                            <h5 className="mb-0">
-                              <i className="bi bi-calendar-week me-2"></i>Enrollment Trends (Last 7 Days)
-                            </h5>
-                          </div>
-                          <div className="card-body">
-                            {analyticsData.enrollmentTrends.length > 0 ? (
-                              <div className="chart-container">
-                                {analyticsData.enrollmentTrends.map((trend) => (
-                                  <div key={trend.date} className="d-flex justify-content-between align-items-center mb-2">
-                                    <span>{new Date(trend.date).toLocaleDateString()}</span>
-                                    <div className="d-flex align-items-center">
-                                      <div className="progress mx-3" style={{width: '200px', height: '20px'}}>
-                                        <div 
-                                          className="progress-bar bg-info" 
-                                          style={{width: `${(trend.enrollments / 10) * 100}%`}}
-                                        ></div>
-                                      </div>
-                                      <strong>{trend.enrollments} enrollments</strong>
-                                    </div>
-                                  </div>
-                                ))}
-                              </div>
-                            ) : (
-                              <p className="text-muted">No enrollment trends available</p>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Cache Info */}
-                    <div className="alert alert-info">
-                      <strong>ℹ️ Cache Info:</strong> Analytics data is cached for 30 minutes to improve performance. 
-                      Last updated: {new Date(analyticsData.timestamp || Date.now()).toLocaleString()}
-                    </div>
-                  </>
+                            </td>
+                            <td data-label="Courses">
+                              {student.courses.length > 0 ? (
+                                <ul className="adm-sublist">
+                                  {student.courses.map((course, idx) => (
+                                    <li key={idx}>
+                                      <span className="adm-sublist__name">{course.courseName}</span>
+                                      <span className={`adm-mono adm-pct adm-pct--${tone(course.completionPercentage)}`}>{course.completionPercentage}%</span>
+                                    </li>
+                                  ))}
+                                </ul>
+                              ) : (
+                                <span className="edu-muted">No enrollments</span>
+                              )}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 ) : (
-                  <div className="alert alert-warning">
-                    <strong>⚠️ No Analytics Data</strong>
-                    <p className="mb-0">Click "Refresh Analytics" to load the data.</p>
-                    <button className="btn btn-primary mt-2" onClick={fetchAnalytics}>
-                      Refresh Analytics
-                    </button>
+                  <div className="edu-empty"><p className="edu-muted">No student data available.</p></div>
+                )}
+
+                <div className="adm-grid-2 adm-grid-2--wide">
+                  {/* Popularity */}
+                  <div>
+                    <div className="adm-section-head">
+                      <span className="edu-label edu-label--accent">02</span>
+                      <h2 className="adm-section-head__title">Most enrolled</h2>
+                      <span className="edu-label adm-section-head__meta">Top 5</span>
+                    </div>
+                    {analyticsData.coursePopularity.length > 0 ? (
+                      <ol className="adm-bars adm-panel">
+                        {analyticsData.coursePopularity.map((course, index) => (
+                          <li key={course.courseId}>
+                            <div className="adm-bars__row">
+                              <span className="adm-mono adm-bars__idx">{pad(index + 1)}</span>
+                              <span className="adm-bars__name">{course.courseName}</span>
+                              <span className="adm-mono adm-bars__val">{course.enrollments}</span>
+                            </div>
+                            <div className="edu-progress">
+                              <div
+                                className={`edu-progress__bar${index === 0 ? ' edu-progress__bar--accent' : ''}`}
+                                style={{ width: `${(course.enrollments / analyticsData.coursePopularity[0].enrollments) * 100}%` }}
+                              ></div>
+                            </div>
+                          </li>
+                        ))}
+                      </ol>
+                    ) : (
+                      <p className="edu-muted adm-none">No enrollment data available.</p>
+                    )}
+                  </div>
+
+                  {/* Completion rates */}
+                  <div>
+                    <div className="adm-section-head">
+                      <span className="edu-label edu-label--accent">03</span>
+                      <h2 className="adm-section-head__title">Completion by course</h2>
+                    </div>
+                    {analyticsData.studentProgress.length > 0 ? (
+                      <ol className="adm-bars adm-bars--scroll adm-panel">
+                        {analyticsData.studentProgress.map((progress) => (
+                          <li key={progress.courseId}>
+                            <div className="adm-bars__row">
+                              <span className="adm-bars__name">{progress.courseName}</span>
+                              <span className="adm-mono adm-bars__val">{progress.completionPercentage}%</span>
+                            </div>
+                            <div className="edu-progress">
+                              <div className={`edu-progress__bar adm-fill--${tone(progress.completionPercentage)}`} style={{ width: `${progress.completionPercentage}%` }}></div>
+                            </div>
+                            <span className="edu-label adm-bars__note">
+                              Avg {progress.avgCompletedLessons} / {progress.totalLessons} lessons
+                            </span>
+                          </li>
+                        ))}
+                      </ol>
+                    ) : (
+                      <p className="edu-muted adm-none">No progress data available.</p>
+                    )}
+                  </div>
+                </div>
+
+                <div className="adm-grid-2 adm-grid-2--wide">
+                  {/* Recent registrations */}
+                  <div>
+                    <div className="adm-section-head">
+                      <span className="edu-label edu-label--accent">04</span>
+                      <h2 className="adm-section-head__title">Recently registered</h2>
+                    </div>
+                    {analyticsData.recentActivity.length > 0 ? (
+                      <div className="adm-table-wrap adm-panel">
+                        <table className="edu-table adm-table adm-table--stack adm-table--compact">
+                          <thead>
+                            <tr>
+                              <th>Name</th>
+                              <th className="adm-num">Courses</th>
+                              <th className="adm-num">Joined</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {analyticsData.recentActivity.map((student) => (
+                              <tr key={student._id}>
+                                <td className="adm-course-cell">
+                                  <strong>{student.name}</strong>
+                                  <span className="adm-mono">{student.email}</span>
+                                </td>
+                                <td className="adm-num adm-mono" data-label="Courses">{student.enrolledCoursesCount}</td>
+                                <td className="adm-num adm-mono" data-label="Joined">{new Date(student.registeredAt).toLocaleDateString()}</td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    ) : (
+                      <p className="edu-muted adm-none">No recent registrations.</p>
+                    )}
+                  </div>
+
+                  {/* Trends */}
+                  <div>
+                    <div className="adm-section-head">
+                      <span className="edu-label edu-label--accent">05</span>
+                      <h2 className="adm-section-head__title">Enrollments, last 7 days</h2>
+                    </div>
+                    {analyticsData.enrollmentTrends.length > 0 ? (
+                      <ul className="adm-trend adm-panel">
+                        {analyticsData.enrollmentTrends.map((trend) => (
+                          <li key={trend.date}>
+                            <span className="adm-mono adm-trend__date">{new Date(trend.date).toLocaleDateString()}</span>
+                            <div className="edu-progress adm-trend__bar">
+                              <div className="edu-progress__bar" style={{ width: `${(trend.enrollments / trendMax) * 100}%` }}></div>
+                            </div>
+                            <span className="adm-mono adm-trend__val">{trend.enrollments}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <p className="edu-muted adm-none">No enrollment trends available.</p>
+                    )}
+                  </div>
+                </div>
+
+                <p className="edu-label adm-cache">
+                  Cached for 30 min / Last updated {new Date(analyticsData.timestamp || Date.now()).toLocaleString()}
+                </p>
+              </>
+            ) : (
+              <div className="edu-empty">
+                <h3 className="edu-h3">No analytics loaded.</h3>
+                <p className="edu-muted">Fetch the latest numbers from the server.</p>
+                <button className="edu-btn edu-btn--sm" onClick={fetchAnalytics}>Refresh analytics</button>
+              </div>
+            )}
+          </section>
+        )}
+      </div>
+
+      {/* ---------------- Course modal ---------------- */}
+      {showCourseModal && (
+        <div className="edu-modal-overlay adm-modal-overlay" onClick={() => setShowCourseModal(false)}>
+          <div className="edu-modal edu-pop adm-modal" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true" aria-labelledby="adm-modal-title">
+            <form onSubmit={handleSaveCourse} className="adm-modal__form">
+              <div className="edu-modal__head">
+                <div>
+                  <p className="edu-label">{editingCourse ? 'Edit record' : 'New record'}</p>
+                  <h2 id="adm-modal-title" className="edu-h3">{editingCourse ? editingCourse.title : 'New course'}</h2>
+                </div>
+                <button type="button" className="edu-close" onClick={() => setShowCourseModal(false)} aria-label="Close">
+                  <i className="bi bi-x-lg"></i>
+                </button>
+              </div>
+
+              <div className="edu-modal__body adm-modal__body">
+                <div className="edu-field">
+                  <label htmlFor="cf-title">Course title *</label>
+                  <input id="cf-title" type="text" className="edu-input" name="title" value={courseForm.title} onChange={handleCourseFormChange} required placeholder="e.g. Data Science Masterclass" />
+                </div>
+
+                <div className="edu-field">
+                  <label htmlFor="cf-desc">Description *</label>
+                  <textarea id="cf-desc" className="edu-textarea" name="description" value={courseForm.description} onChange={handleCourseFormChange} required rows="3" placeholder="Brief description of the course"></textarea>
+                </div>
+
+                <div className="adm-grid-2">
+                  <div className="edu-field">
+                    <label htmlFor="cf-instructor">Instructor</label>
+                    <input id="cf-instructor" type="text" className="edu-input" name="instructor" value={courseForm.instructor} onChange={handleCourseFormChange} placeholder="Instructor name" />
+                  </div>
+                  <div className="edu-field">
+                    <label htmlFor="cf-duration">Duration</label>
+                    <input id="cf-duration" type="text" className="edu-input" name="duration" value={courseForm.duration} onChange={handleCourseFormChange} placeholder="e.g. 3 Months" />
+                  </div>
+                  <div className="edu-field">
+                    <label htmlFor="cf-price">Price (₹) *</label>
+                    <input id="cf-price" type="number" className="edu-input adm-mono" name="price" value={courseForm.price} onChange={handleCourseFormChange} required min="0" />
+                  </div>
+                  <div className="edu-field">
+                    <label htmlFor="cf-category">Category *</label>
+                    <select id="cf-category" className="edu-select" name="category" value={courseForm.category} onChange={handleCourseFormChange} required>
+                      {CATEGORIES.map((c) => (
+                        <option key={c.key} value={c.key}>{c.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div className="edu-field">
+                  <label htmlFor="cf-thumb">Thumbnail URL</label>
+                  <input id="cf-thumb" type="url" className="edu-input" name="thumbnail" value={courseForm.thumbnail} onChange={handleCourseFormChange} placeholder="https://example.com/image.jpg" />
+                </div>
+
+                {editingCourse && (
+                  <div className="adm-outline">
+                    <div className="adm-outline__head">
+                      <p className="edu-label edu-label--ink">Syllabus</p>
+                      <span className="edu-label">
+                        {editingCourse.modules?.length || 0} modules / {lessonCount(editingCourse)} lessons
+                      </span>
+                    </div>
+                    {editingCourse.modules?.length ? (
+                      <ol className="adm-outline__modules">
+                        {editingCourse.modules.map((m, mi) => (
+                          <li key={m._id || mi} className="adm-outline__module">
+                            <div className="adm-outline__mtitle">
+                              <span className="adm-mono">{pad(mi + 1)}</span>
+                              <strong>{m.title}</strong>
+                            </div>
+                            {m.lessons?.length > 0 && (
+                              <ol className="adm-outline__lessons">
+                                {m.lessons.map((l, li) => (
+                                  <li key={l._id || li}>
+                                    <span className="adm-mono">{mi + 1}.{li + 1}</span>
+                                    <span className="adm-outline__ltitle">{l.title}</span>
+                                    {l.document && <span className="edu-tag edu-tag--forest adm-outline__doc">PDF</span>}
+                                  </li>
+                                ))}
+                              </ol>
+                            )}
+                          </li>
+                        ))}
+                      </ol>
+                    ) : (
+                      <p className="edu-muted adm-none">No modules in this course yet.</p>
+                    )}
                   </div>
                 )}
               </div>
-            )}
-          </div>
-        </div>
-      </div>
 
-      {/* Course Modal */}
-      {showCourseModal && (
-        <div className="modal-overlay" onClick={() => setShowCourseModal(false)}>
-          <div className="modal-dialog modal-lg" onClick={(e) => e.stopPropagation()}>
-            <div className="modal-content">
-              <div className="modal-header">
-                <h5 className="modal-title">
-                  {editingCourse ? 'Edit Course' : 'Add New Course'}
-                </h5>
-                <button 
-                  type="button" 
-                  className="btn-close" 
-                  onClick={() => setShowCourseModal(false)}
-                ></button>
+              <div className="edu-modal__foot">
+                <button type="button" className="edu-btn edu-btn--ghost" onClick={() => setShowCourseModal(false)}>
+                  Cancel
+                </button>
+                <button type="submit" className="edu-btn edu-btn--accent" disabled={loading}>
+                  {loading ? 'Saving...' : editingCourse ? 'Update course' : 'Create course'}
+                </button>
               </div>
-              <div className="modal-body">
-                <form onSubmit={handleSaveCourse}>
-                  <div className="row">
-                    <div className="col-md-12 mb-3">
-                      <label className="form-label">Course Title *</label>
-                      <input
-                        type="text"
-                        className="form-control"
-                        name="title"
-                        value={courseForm.title}
-                        onChange={handleCourseFormChange}
-                        required
-                        placeholder="e.g., Data Science Masterclass"
-                      />
-                    </div>
-
-                    <div className="col-md-12 mb-3">
-                      <label className="form-label">Description *</label>
-                      <textarea
-                        className="form-control"
-                        name="description"
-                        value={courseForm.description}
-                        onChange={handleCourseFormChange}
-                        required
-                        rows="3"
-                        placeholder="Brief description of the course"
-                      ></textarea>
-                    </div>
-
-                    <div className="col-md-6 mb-3">
-                      <label className="form-label">Instructor</label>
-                      <input
-                        type="text"
-                        className="form-control"
-                        name="instructor"
-                        value={courseForm.instructor}
-                        onChange={handleCourseFormChange}
-                        placeholder="Instructor name"
-                      />
-                    </div>
-
-                    <div className="col-md-6 mb-3">
-                      <label className="form-label">Duration</label>
-                      <input
-                        type="text"
-                        className="form-control"
-                        name="duration"
-                        value={courseForm.duration}
-                        onChange={handleCourseFormChange}
-                        placeholder="e.g., 3 Months"
-                      />
-                    </div>
-
-                    <div className="col-md-6 mb-3">
-                      <label className="form-label">Price (₹) *</label>
-                      <input
-                        type="number"
-                        className="form-control"
-                        name="price"
-                        value={courseForm.price}
-                        onChange={handleCourseFormChange}
-                        required
-                        min="0"
-                      />
-                    </div>
-
-                    <div className="col-md-6 mb-3">
-                      <label className="form-label">Category *</label>
-                      <select
-                        className="form-select"
-                        name="category"
-                        value={courseForm.category}
-                        onChange={handleCourseFormChange}
-                        required
-                      >
-                        <option value="finance">Finance</option>
-                        <option value="technology">Technology</option>
-                        <option value="analytics">Analytics</option>
-                        <option value="marketing">Marketing</option>
-                        <option value="management">Management</option>
-                      </select>
-                    </div>
-
-                    <div className="col-md-12 mb-3">
-                      <label className="form-label">Thumbnail URL</label>
-                      <input
-                        type="url"
-                        className="form-control"
-                        name="thumbnail"
-                        value={courseForm.thumbnail}
-                        onChange={handleCourseFormChange}
-                        placeholder="https://example.com/image.jpg"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="d-flex justify-content-end gap-2">
-                    <button
-                      type="button"
-                      className="btn btn-secondary"
-                      onClick={() => setShowCourseModal(false)}
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      type="submit"
-                      className="btn btn-success"
-                      disabled={loading}
-                    >
-                      {loading ? (
-                        <>
-                          <span className="spinner-border spinner-border-sm me-2"></span>
-                          Saving...
-                        </>
-                      ) : (
-                        <>
-                          {editingCourse ? 'Update Course' : 'Create Course'}
-                        </>
-                      )}
-                    </button>
-                  </div>
-                </form>
-              </div>
-            </div>
+            </form>
           </div>
         </div>
       )}
-    </div>
+    </AppShell>
   );
 };
 

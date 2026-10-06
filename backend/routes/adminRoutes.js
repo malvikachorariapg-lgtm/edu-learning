@@ -3,13 +3,14 @@ const router = express.Router();
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
-const pdfParse = require('pdf-parse');
-const axios = require('axios');
+const mongoose = require('mongoose');
 const Course = require('../models/Course');
 const User = require('../models/User');
 const Payment = require('../models/Payment');
 const { verifyToken, isAdmin } = require('../middleware/auth');
-const { cacheMiddleware } = require('../config/redis');
+const { aiLimiter } = require('../middleware/rateLimiters');
+const { cacheMiddleware, invalidateCourseCache } = require('../config/redis');
+const { getAIConfig, getDocumentSummary, AIServiceError } = require('../services/aiService');
 
 // Create uploads directory if it doesn't exist
 const uploadsDir = path.join(__dirname, '../uploads');
@@ -24,74 +25,44 @@ const storage = multer.diskStorage({
   },
   filename: function (req, file, cb) {
     const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
-    cb(null, uniqueSuffix + path.extname(file.originalname));
+    cb(null, uniqueSuffix + '.pdf');
   }
 });
 
 const upload = multer({
   storage: storage,
   fileFilter: function (req, file, cb) {
-    if (file.mimetype === 'application/pdf') {
+    if (file.mimetype === 'application/pdf' && path.extname(file.originalname).toLowerCase() === '.pdf') {
       cb(null, true);
     } else {
-      cb(new Error('Only PDF files are allowed'));
+      const err = new Error('Only PDF files are allowed');
+      err.status = 400;
+      cb(err);
     }
   },
   limits: {
-    fileSize: 10 * 1024 * 1024 // 10MB limit
+    fileSize: 10 * 1024 * 1024, // 10MB limit
+    files: 1,
+    fields: 10
   }
 });
 
-// Function to call Azure OpenAI
-async function callAzureOpenAI(prompt) {
-  try {
-    const endpoint = process.env.AZURE_OPENAI_ENDPOINT;
-    const apiKey = process.env.AZURE_OPENAI_API_KEY;
-    const deployment = process.env.AZURE_OPENAI_CHATGPT_DEPLOYMENT;
-    const apiVersion = process.env.AZURE_OPENAI_API_VERSION;
+// Wrap multer so upload errors return a clean 400 instead of a generic 500
+const uploadDocumentFile = (req, res, next) => {
+  upload.single('document')(req, res, (err) => {
+    if (!err) return next();
+    const message = err.code === 'LIMIT_FILE_SIZE' ? 'File too large. Maximum size is 10MB.' : err.message;
+    return res.status(400).json({ success: false, message });
+  });
+};
 
-    // Validate environment variables
-    if (!endpoint || !apiKey || !deployment || !apiVersion) {
-      throw new Error('Azure OpenAI environment variables not properly configured');
-    }
+const removeFile = (filePath) => fs.promises.unlink(filePath).catch(() => {});
 
-    const url = `${endpoint}openai/deployments/${deployment}/chat/completions?api-version=${apiVersion}`;
-
-    console.log('Calling Azure OpenAI:', {
-      endpoint,
-      deployment,
-      apiVersion,
-      hasApiKey: !!apiKey
-    });
-
-    const response = await axios.post(url, {
-      messages: [
-        { role: 'system', content: 'You are an expert educational AI assistant. Provide clear, structured, and comprehensive summaries that help students learn effectively. Use emojis to make content engaging.' },
-        { role: 'user', content: prompt }
-      ],
-      max_tokens: 800,
-      temperature: 0.7
-    }, {
-      headers: {
-        'Content-Type': 'application/json',
-        'api-key': apiKey
-      }
-    });
-
-    return response.data.choices[0].message.content;
-  } catch (error) {
-    console.error('Azure OpenAI Error Details:', {
-      message: error.message,
-      status: error.response?.status,
-      statusText: error.response?.statusText,
-      data: error.response?.data
-    });
-    throw error;
-  }
-}
+// All routes in this file require an admin, except summarize-document (any logged-in user)
+const adminOnly = [verifyToken, isAdmin];
 
 // Upload document to a lesson
-router.post('/upload-document', upload.single('document'), async (req, res) => {
+router.post('/upload-document', adminOnly, uploadDocumentFile, async (req, res) => {
   try {
     const { courseId, moduleId, lessonId } = req.body;
 
@@ -104,7 +75,7 @@ router.post('/upload-document', upload.single('document'), async (req, res) => {
 
     if (!courseId || !moduleId || !lessonId) {
       // Delete uploaded file
-      fs.unlinkSync(req.file.path);
+      await removeFile(req.file.path);
       return res.status(400).json({
         success: false,
         message: 'Missing required fields'
@@ -112,9 +83,9 @@ router.post('/upload-document', upload.single('document'), async (req, res) => {
     }
 
     // Find the course
-    const course = await Course.findById(courseId);
+    const course = mongoose.isValidObjectId(courseId) ? await Course.findById(courseId) : null;
     if (!course) {
-      fs.unlinkSync(req.file.path);
+      await removeFile(req.file.path);
       return res.status(404).json({
         success: false,
         message: 'Course not found'
@@ -124,7 +95,7 @@ router.post('/upload-document', upload.single('document'), async (req, res) => {
     // Find the module
     const module = course.modules.id(moduleId);
     if (!module) {
-      fs.unlinkSync(req.file.path);
+      await removeFile(req.file.path);
       return res.status(404).json({
         success: false,
         message: 'Module not found'
@@ -134,7 +105,7 @@ router.post('/upload-document', upload.single('document'), async (req, res) => {
     // Find the lesson
     const lesson = module.lessons.id(lessonId);
     if (!lesson) {
-      fs.unlinkSync(req.file.path);
+      await removeFile(req.file.path);
       return res.status(404).json({
         success: false,
         message: 'Lesson not found'
@@ -143,10 +114,7 @@ router.post('/upload-document', upload.single('document'), async (req, res) => {
 
     // Delete old document if exists
     if (lesson.document && lesson.document.filepath) {
-      const oldFilePath = path.join(__dirname, '..', lesson.document.filepath);
-      if (fs.existsSync(oldFilePath)) {
-        fs.unlinkSync(oldFilePath);
-      }
+      await removeFile(path.join(__dirname, '..', lesson.document.filepath));
     }
 
     // Update lesson with document info
@@ -157,6 +125,7 @@ router.post('/upload-document', upload.single('document'), async (req, res) => {
     };
 
     await course.save();
+    await invalidateCourseCache();
 
     res.json({
       success: true,
@@ -168,10 +137,10 @@ router.post('/upload-document', upload.single('document'), async (req, res) => {
     });
   } catch (error) {
     // Clean up uploaded file on error
-    if (req.file && fs.existsSync(req.file.path)) {
-      fs.unlinkSync(req.file.path);
+    if (req.file) {
+      await removeFile(req.file.path);
     }
-    
+
     console.error('Error uploading document:', error);
     res.status(500).json({
       success: false,
@@ -181,10 +150,17 @@ router.post('/upload-document', upload.single('document'), async (req, res) => {
   }
 });
 
-// Summarize document using AI
-router.post('/summarize-document', async (req, res) => {
+// Summarize document using AI (Vertex AI Gemini) - admins, or learners enrolled in the course
+router.post('/summarize-document', verifyToken, aiLimiter, async (req, res) => {
   try {
     const { courseId, moduleId, lessonId } = req.body;
+
+    if (!getAIConfig().enabled) {
+      return res.status(503).json({
+        success: false,
+        message: 'AI summarization is currently disabled.'
+      });
+    }
 
     if (!courseId || !moduleId || !lessonId) {
       return res.status(400).json({
@@ -193,8 +169,28 @@ router.post('/summarize-document', async (req, res) => {
       });
     }
 
-    // Find the lesson
-    const course = await Course.findById(courseId);
+    if (![courseId, moduleId, lessonId].every(id => mongoose.isValidObjectId(id))) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid course, module or lesson ID'
+      });
+    }
+
+    // Learners can only summarise documents of programs they are enrolled in
+    if (req.user.role !== 'admin') {
+      const enrolled = await User.exists({ _id: req.user.id, 'enrolledCourses.courseId': courseId });
+      if (!enrolled) {
+        return res.status(403).json({
+          success: false,
+          message: 'Enroll in this course to use AI summaries'
+        });
+      }
+    }
+
+    // Only fetch the bits of the course tree we need
+    const course = await Course.findById(courseId)
+      .select('modules._id modules.lessons._id modules.lessons.title modules.lessons.document')
+      .lean();
     if (!course) {
       return res.status(404).json({
         success: false,
@@ -202,7 +198,7 @@ router.post('/summarize-document', async (req, res) => {
       });
     }
 
-    const module = course.modules.id(moduleId);
+    const module = (course.modules || []).find(m => String(m._id) === String(moduleId));
     if (!module) {
       return res.status(404).json({
         success: false,
@@ -210,7 +206,7 @@ router.post('/summarize-document', async (req, res) => {
       });
     }
 
-    const lesson = module.lessons.id(lessonId);
+    const lesson = (module.lessons || []).find(l => String(l._id) === String(lessonId));
     if (!lesson || !lesson.document || !lesson.document.filepath) {
       return res.status(404).json({
         success: false,
@@ -218,62 +214,32 @@ router.post('/summarize-document', async (req, res) => {
       });
     }
 
-    // Read and parse PDF
-    const filePath = path.join(__dirname, '..', lesson.document.filepath);
-    if (!fs.existsSync(filePath)) {
+    // Resolve the file and make sure it stays inside the uploads directory
+    const filePath = path.resolve(__dirname, '..', lesson.document.filepath);
+    if (!filePath.startsWith(uploadsDir + path.sep)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid document path'
+      });
+    }
+
+    let stat;
+    try {
+      stat = await fs.promises.stat(filePath);
+    } catch (e) {
       return res.status(404).json({
         success: false,
         message: 'Document file not found on server'
       });
     }
 
-    const dataBuffer = fs.readFileSync(filePath);
-    const pdfData = await pdfParse(dataBuffer);
-    const pdfText = pdfData.text;
+    const { summary, cached } = await getDocumentSummary({
+      documentId: `${lesson.document.filepath}:${stat.size}:${stat.mtimeMs}`,
+      loadBuffer: () => fs.promises.readFile(filePath),
+      meta: { lessonTitle: lesson.title, documentName: lesson.document.filename }
+    });
 
-    if (!pdfText || pdfText.trim().length === 0) {
-      return res.status(400).json({
-        success: false,
-        message: 'No text content found in PDF'
-      });
-    }
-
-    // Check if OpenAI is configured
-    if (!process.env.AZURE_OPENAI_ENDPOINT || !process.env.AZURE_OPENAI_API_KEY) {
-      return res.status(500).json({
-        success: false,
-        message: 'AI service not configured',
-        testMode: true,
-        summary: `📚 EDUCATIONAL SUMMARY\n\n📋 OVERVIEW\nThis document "${lesson.document.filename}" contains important course material for ${lesson.title}. The content spans ${Math.floor(pdfText.length / 1000)} pages of educational material.\n\n🎯 KEY CONCEPTS\n• Core principles and fundamental theories\n• Practical methodologies and frameworks\n• Real-world applications and examples\n• Step-by-step processes and techniques\n• Industry best practices\n\n💡 IMPORTANT POINTS\n• Understanding the foundational concepts is crucial for mastery\n• The document includes practical examples to reinforce learning\n• Key formulas and principles are highlighted throughout\n• Case studies demonstrate real-world applications\n• Practice exercises help solidify understanding\n\n📚 PRACTICAL APPLICATIONS\nThe knowledge from this document can be applied in:\n• Project work and assignments\n• Professional scenarios and workplace challenges\n• Building practical skills for career advancement\n• Understanding industry-standard practices\n\n🎓 LEARNING OUTCOMES\nAfter studying this material, you will be able to:\n• Comprehend and explain the core concepts covered\n• Apply the principles to solve practical problems\n• Analyze real-world scenarios using the frameworks taught\n• Demonstrate proficiency in the key skills introduced\n\n⚠️ Note: This is a demo summary. Configure Azure OpenAI credentials in the backend .env file for AI-powered summaries.`
-      });
-    }
-
-    // Prepare prompt for summarization with structured output
-    const prompt = `You are an educational AI assistant helping students understand course materials.
-
-Analyze the following document and provide a comprehensive, well-structured summary with these sections:
-
- OVERVIEW (2-3 sentences)
-- Briefly describe what this document covers
-
- KEY CONCEPTS (3-5 bullet points)
-- List the main concepts and topics covered
-
- IMPORTANT POINTS (3-5 bullet points)
-- Highlight the most important information students should remember
-
- PRACTICAL APPLICATIONS
-- Explain how this knowledge can be applied
-
- LEARNING OUTCOMES
-- What students will be able to do after understanding this material
-
-Document Text:
-${pdfText.substring(0, 4000)}`;
-
-    // Call Azure OpenAI
-    const summary = await callAzureOpenAI(prompt);
-
+    res.set('X-Summary-Cache', cached ? 'HIT' : 'MISS');
     res.json({
       success: true,
       data: {
@@ -283,35 +249,30 @@ ${pdfText.substring(0, 4000)}`;
       }
     });
   } catch (error) {
-    console.error('Error summarizing document:', {
-      message: error.message,
-      stack: error.stack,
-      response: error.response?.data
-    });
-    
-    // Provide more specific error message
-    let errorMessage = 'Error summarizing document';
-    if (error.response?.status === 401) {
-      errorMessage = 'Azure OpenAI authentication failed. Please check API key.';
-    } else if (error.response?.status === 404) {
-      errorMessage = 'Azure OpenAI deployment not found. Please check deployment name.';
-    } else if (error.message.includes('environment variables')) {
-      errorMessage = 'Azure OpenAI is not properly configured on the server.';
+    if (error instanceof AIServiceError) {
+      console.error('AI summarization error:', error.message, error.details || '');
+      return res.status(error.status).json({
+        success: false,
+        message: error.message,
+        error: error.details || error.message
+      });
     }
-    
+
+    console.error('Error summarizing document:', error);
     res.status(500).json({
       success: false,
-      message: errorMessage,
-      error: error.message,
-      details: error.response?.data || null
+      message: 'Error summarizing document',
+      error: error.message
     });
   }
 });
 
 // Get all courses for admin
-router.get('/courses', async (req, res) => {
+router.get('/courses', adminOnly, async (req, res) => {
   try {
-    const courses = await Course.find().select('title modules._id modules.title modules.lessons._id modules.lessons.title modules.lessons.document');
+    // Full documents: the admin editor round-trips every field (incl. lesson
+    // videoUrls) on save, so a trimmed projection here would wipe data.
+    const courses = await Course.find().sort({ createdAt: -1 }).lean();
     res.json({
       success: true,
       data: courses
@@ -327,10 +288,11 @@ router.get('/courses', async (req, res) => {
 });
 
 // Create new course
-router.post('/courses', async (req, res) => {
+router.post('/courses', adminOnly, async (req, res) => {
   try {
     const courseData = req.body;
     const course = await Course.create(courseData);
+    await invalidateCourseCache();
     res.json({
       success: true,
       message: 'Course created successfully',
@@ -347,7 +309,7 @@ router.post('/courses', async (req, res) => {
 });
 
 // Update course
-router.put('/courses/:id', async (req, res) => {
+router.put('/courses/:id', adminOnly, async (req, res) => {
   try {
     const { id } = req.params;
     const updateData = req.body;
@@ -357,6 +319,7 @@ router.put('/courses/:id', async (req, res) => {
       updateData,
       { new: true, runValidators: true }
     );
+    await invalidateCourseCache();
     
     if (!course) {
       return res.status(404).json({
@@ -371,6 +334,9 @@ router.put('/courses/:id', async (req, res) => {
       data: course
     });
   } catch (error) {
+    if (error.name === 'ValidationError' || error.name === 'CastError') {
+      return res.status(400).json({ success: false, message: error.message });
+    }
     console.error('Error updating course:', error);
     res.status(500).json({
       success: false,
@@ -381,11 +347,12 @@ router.put('/courses/:id', async (req, res) => {
 });
 
 // Delete course
-router.delete('/courses/:id', async (req, res) => {
+router.delete('/courses/:id', adminOnly, async (req, res) => {
   try {
     const { id } = req.params;
     
     const course = await Course.findByIdAndDelete(id);
+    await invalidateCourseCache();
     
     if (!course) {
       return res.status(404).json({
@@ -399,10 +366,7 @@ router.delete('/courses/:id', async (req, res) => {
       for (const module of course.modules) {
         for (const lesson of module.lessons) {
           if (lesson.document && lesson.document.filepath) {
-            const filePath = path.join(__dirname, '..', lesson.document.filepath);
-            if (fs.existsSync(filePath)) {
-              fs.unlinkSync(filePath);
-            }
+            await removeFile(path.join(__dirname, '..', lesson.document.filepath));
           }
         }
       }

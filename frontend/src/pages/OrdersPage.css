@@ -1,0 +1,175 @@
+/* ==========================================================================
+   Orders — purchase history with server-side paging. Classes prefixed .ord-
+   ========================================================================== */
+
+.ord { display: flex; flex-direction: column; gap: clamp(22px, 3vw, 32px); max-width: 1180px; padding-bottom: 24px; }
+.ord p { margin: 0; }
+.ord-top-btn { min-height: 44px; }
+
+/* Promo strip sits inside the content column here, so give it a frame */
+.ord-promo { border: 1px solid var(--line-soft); }
+.ord-promo .edu-container { padding: 0 16px; max-width: none; }
+
+.ord-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; flex-wrap: wrap; }
+.ord-head__title { margin: 10px 0 12px; text-transform: uppercase; font-weight: 900; letter-spacing: -0.04em; }
+.ord-head__sub { color: var(--ink-2); max-width: 60ch; }
+
+/* ---------- Filters ---------- */
+.ord-filters { display: flex; flex-wrap: wrap; gap: 8px; }
+.ord-filter {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  padding: 0 16px;
+  background: transparent;
+  border: 1px solid var(--line);
+  color: var(--ink-2);
+  font-family: var(--font-body);
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+.ord-filter:hover { border-color: var(--ink); color: var(--ink); }
+.ord-filter.is-on { background: var(--ink); border-color: var(--ink); color: var(--ink-inverse); }
+.ord-filter__n {
+  min-width: 22px;
+  padding: 2px 6px;
+  background: var(--paper-3);
+  color: var(--ink);
+  font-size: 0.66rem;
+  letter-spacing: 0.04em;
+  text-align: center;
+}
+.ord-filter.is-on .ord-filter__n { background: var(--accent); color: var(--accent-ink); }
+
+/* ---------- List ---------- */
+.ord-loading { min-height: 30vh; }
+.ord-empty { display: flex; flex-direction: column; align-items: center; gap: 12px; }
+.ord-empty .edu-h3 { margin: 0; }
+
+.ord-list { background: var(--card); border: 1px solid var(--line); transition: opacity 0.2s ease; }
+.ord-list.is-loading { opacity: 0.55; }
+
+.ord-row {
+  display: grid;
+  grid-template-columns: minmax(0, 2.4fr) minmax(0, 1fr) minmax(0, 0.9fr) minmax(0, 1fr) minmax(0, 0.8fr) 150px;
+  align-items: center;
+  gap: 16px;
+  padding: 18px 20px;
+  border-bottom: 1px solid var(--line-soft);
+}
+.ord-row:last-child { border-bottom: 0; }
+article.ord-row:hover { background: var(--paper-2); }
+.ord-row--head {
+  padding-top: 14px;
+  padding-bottom: 14px;
+  border-bottom-color: var(--line);
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.ord-cell { display: flex; flex-direction: column; gap: 4px; min-width: 0; font-size: 0.92rem; }
+.ord-course {
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 1.02rem;
+  letter-spacing: -0.01em;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+}
+.ord-meta { font-size: 0.76rem; color: var(--muted); overflow-wrap: anywhere; }
+.ord-num { text-align: right; align-items: flex-end; }
+.ord-amount { font-family: var(--font-display); font-weight: 800; font-size: 1.05rem; letter-spacing: -0.01em; white-space: nowrap; }
+.ord-strike { text-decoration: line-through; }
+.ord-coupon {
+  align-self: flex-start;
+  padding: 3px 8px;
+  border: 1px dashed var(--accent);
+  color: var(--accent);
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.1em;
+}
+.ord-cell--actions { align-items: flex-end; }
+.ord-cell--actions .edu-btn { min-height: 44px; white-space: nowrap; }
+
+.ord-status {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 10px;
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+.ord-status::before { content: ''; width: 6px; height: 6px; background: currentColor; }
+.ord-status--forest { background: var(--forest-soft); color: var(--forest); }
+.ord-status--ochre { background: var(--ochre-soft); color: var(--ochre); }
+.ord-status--danger { background: var(--danger-soft); color: var(--danger); }
+.ord-status--soft { border: 1px solid var(--line-soft); color: var(--muted); }
+
+/* ---------- Pager ---------- */
+.ord-pager { display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap; }
+.ord-pager__info { font-size: 0.8rem; color: var(--muted); }
+.ord-pager__btns { display: flex; flex-wrap: wrap; gap: 6px; }
+.ord-page {
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0 12px;
+  background: var(--card);
+  border: 1px solid var(--line);
+  color: var(--ink);
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: background-color 0.15s ease, border-color 0.15s ease;
+}
+.ord-page:hover:not(:disabled):not(.is-on) { border-color: var(--accent); }
+.ord-page.is-on { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); cursor: default; }
+.ord-page:disabled:not(.is-on) { opacity: 0.4; cursor: not-allowed; }
+.ord-page--step { font-family: var(--font-body); font-size: 0.7rem; letter-spacing: 0.14em; text-transform: uppercase; }
+.ord-page--gap { display: inline-grid; place-items: center; border-color: transparent; background: transparent; cursor: default; }
+
+/* ---------- Responsive: rows become cards ---------- */
+@media (max-width: 900px) {
+  .ord-row--head { display: none; }
+  .ord-row {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 14px 16px;
+    padding: 18px;
+    align-items: start;
+  }
+  .ord-cell--course { grid-column: 1 / -1; }
+  .ord-cell[data-label]::before {
+    content: attr(data-label);
+    font-size: 0.6rem;
+    font-weight: 700;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .ord-num { text-align: left; align-items: flex-start; }
+  .ord-cell--actions { grid-column: 1 / -1; align-items: stretch; }
+  .ord-cell--actions .edu-btn { width: 100%; justify-content: center; }
+}
+
+@media (max-width: 520px) {
+  .ord-pager { flex-direction: column; align-items: stretch; }
+  .ord-pager__btns { justify-content: center; }
+  .ord-page--step { flex: 1 1 100%; }
+  .ord-pager__btns .ord-page--step:first-child { order: -1; flex: 1 1 calc(50% - 3px); }
+  .ord-pager__btns .ord-page--step:last-child { order: -1; flex: 1 1 calc(50% - 3px); }
+  .ord-filters { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .ord-filter { padding: 0 12px; justify-content: center; }
+}

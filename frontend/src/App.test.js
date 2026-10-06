@@ -1,8 +1,11 @@
 import { render, screen } from '@testing-library/react';
 import App from './App';
 
-test('renders learn react link', () => {
+jest.mock('./services/api', () => ({
+  getAllCourses: () => Promise.resolve({ data: { data: [] } })
+}));
+
+test('renders the Edu Learning landing page', async () => {
   render(<App />);
-  const linkElement = screen.getByText(/learn react/i);
-  expect(linkElement).toBeInTheDocument();
+  expect(await screen.findByText(/Skills that/i)).toBeInTheDocument();
 });

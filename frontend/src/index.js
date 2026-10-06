@@ -11,3 +11,10 @@ root.render(
   </React.StrictMode>
 );
 reportWebVitals();
+
+// Tracing loads after the page is interactive so it never slows first paint
+if (process.env.REACT_APP_OTEL_ENDPOINT) {
+  const loadTelemetry = () => import('./telemetry').then((m) => m.startTelemetry()).catch(() => {});
+  if (document.readyState === 'complete') loadTelemetry();
+  else window.addEventListener('load', loadTelemetry, { once: true });
+}

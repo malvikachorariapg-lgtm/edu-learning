@@ -1,225 +1,311 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { getAllCourses } from '../services/api';
+import SiteHeader from '../components/SiteHeader';
+import SiteFooter from '../components/SiteFooter';
+import WishlistButton from '../components/WishlistButton';
+import { CATEGORIES } from '../brand';
+import {
+  searchCourses,
+  thumbUrl,
+  FALLBACK_THUMB,
+  formatPrice,
+  formatRating,
+  isSignedIn
+} from '../services/catalogApi';
 import './CoursesPage.css';
+
+const pad = (n) => String(n).padStart(2, '0');
+
+const SORT_OPTIONS = [
+  { value: '', label: 'Featured' },
+  { value: 'rating', label: 'Top rated' },
+  { value: 'newest', label: 'Newest' },
+  { value: 'price_asc', label: 'Price: low to high' },
+  { value: 'price_desc', label: 'Price: high to low' }
+];
+
+const SEARCH_DELAY_MS = 350;
 
 const CoursesPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const [courses, setCourses] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [filter, setFilter] = useState('all');
   const selectedInterest = location.state?.interest || 'all';
 
-  // Smart URL handler for images
-  const getThumbnailUrl = (thumbnail) => {
-    if (!thumbnail) {
-      return 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=800&q=80';
-    }
-    // If it's already a full URL (like Unsplash), use it directly
-    if (thumbnail.startsWith('http://') || thumbnail.startsWith('https://')) {
-      return thumbnail;
-    }
-    // Otherwise, prepend the server URL
-    const serverURL = process.env.REACT_APP_API_URL?.replace('/api', '') || 'http://localhost:5000';
-    return `${serverURL}${thumbnail}`;
-  };
+  const [catalog, setCatalog] = useState([]);
+  const [catalogLoading, setCatalogLoading] = useState(true);
+  const [results, setResults] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [filter, setFilter] = useState(selectedInterest);
+  const [query, setQuery] = useState('');
+  const [search, setSearch] = useState('');
+  const [sort, setSort] = useState('');
+  const requestId = useRef(0);
+
+  // Full catalogue for the board count and category tallies
+  useEffect(() => {
+    let alive = true;
+    searchCourses()
+      .then((res) => { if (alive) setCatalog(res.data.data || []); })
+      .catch(() => {})
+      .finally(() => { if (alive) setCatalogLoading(false); });
+    return () => { alive = false; };
+  }, []);
 
   useEffect(() => {
-    fetchCourses();
-    if (selectedInterest !== 'all') {
-      setFilter(selectedInterest);
-    }
+    if (selectedInterest !== 'all') setFilter(selectedInterest);
   }, [selectedInterest]);
 
-  const fetchCourses = async () => {
-    try {
-      setLoading(true);
-      const response = await getAllCourses();
-      setCourses(response.data.data);
-    } catch (error) {
-      console.error('Error fetching courses:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
+  // Debounce typing before asking the server
+  useEffect(() => {
+    const t = setTimeout(() => setSearch(query), SEARCH_DELAY_MS);
+    return () => clearTimeout(t);
+  }, [query]);
 
-  const handleEnroll = (courseId) => {
-    const user = localStorage.getItem('user');
-    if (!user) {
+  useEffect(() => {
+    const id = ++requestId.current;
+    setLoading(true);
+    searchCourses({ search, category: filter, sort })
+      .then((res) => {
+        if (id === requestId.current) setResults(res.data.data || []);
+      })
+      .catch(() => {
+        if (id === requestId.current) setResults([]);
+      })
+      .finally(() => {
+        if (id === requestId.current) setLoading(false);
+      });
+  }, [search, filter, sort]);
+
+  const openCourse = (courseId) => navigate(`/courses/${courseId}`);
+
+  const handleEnroll = (e, courseId) => {
+    e.stopPropagation();
+    if (!isSignedIn()) {
       navigate('/auth', { state: { from: `/payment/${courseId}` } });
     } else {
       navigate(`/payment/${courseId}`);
     }
   };
 
-  const filteredCourses = filter === 'all' 
-    ? courses 
-    : courses.filter(course => 
-        course.category?.toLowerCase() === filter.toLowerCase() ||
-        course.title.toLowerCase().includes(filter.toLowerCase())
-      );
+  const resetAll = () => {
+    setFilter('all');
+    setQuery('');
+    setSearch('');
+    setSort('');
+  };
 
-  if (loading) {
-    return (
-      <div className="courses-page">
-        <div className="container text-center py-5">
-          <div className="spinner-border text-success" role="status">
-            <span className="visually-hidden">Loading...</span>
-          </div>
-          <p className="mt-3">Loading courses...</p>
-        </div>
-      </div>
-    );
-  }
+  const tabs = [{ key: 'all', label: 'All' }, ...CATEGORIES];
+  const activeLabel = tabs.find((t) => t.key === filter)?.label || 'All';
+  const countFor = (key) => (key === 'all' ? catalog.length : catalog.filter((c) => c.category === key).length);
+  const hasFilters = filter !== 'all' || query !== '' || sort !== '';
+  const firstLoad = loading && results.length === 0;
 
   return (
     <div className="courses-page">
-      {/* Navigation Header */}
-      <nav className="navbar navbar-expand-lg navbar-light bg-white sticky-top shadow-sm">
-        <div className="container">
-          <button className="navbar-brand btn btn-link text-decoration-none" onClick={() => navigate('/')}>
-            <span style={{fontWeight: 'bold', fontSize: '24px', color: '#0d6157'}}>
-              IMARTICUS LEARNING
-            </span>
-          </button>
-          <button className="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-            <span className="navbar-toggler-icon"></span>
-          </button>
-          <div className="collapse navbar-collapse" id="navbarNav">
-            <ul className="navbar-nav ms-auto">
-              <li className="nav-item">
-                <button className="btn btn-link nav-link" onClick={() => navigate('/')}>Home</button>
-              </li>
-              <li className="nav-item">
-                <button className="btn btn-outline-success ms-2" onClick={() => navigate('/auth')}>Login</button>
-              </li>
-            </ul>
+      <SiteHeader />
+
+      <header className="courses-head">
+        <div className="edu-container">
+          <div className="courses-head__meta">
+            <p className="edu-label edu-label--accent">Programs</p>
+            <p className="edu-label">
+              {catalogLoading ? '—' : `${pad(catalog.length)} on the board`}
+            </p>
+          </div>
+
+          <h1 className="edu-display courses-head__title">
+            Pick one.<br /><em>Finish it.</em>
+          </h1>
+
+          <div className="courses-head__row">
+            <p className="edu-lead">
+              Every program has a mentor, a weekly deadline and a final project
+              someone actually reads. The price you see is the whole price.
+            </p>
+            <label className="courses-search" htmlFor="courses-search">
+              <span className="edu-label">Search programs</span>
+              <input
+                id="courses-search"
+                type="search"
+                className="courses-search__input"
+                placeholder="Python, valuation, Tableau"
+                autoComplete="off"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+              />
+            </label>
+          </div>
+        </div>
+      </header>
+
+      <nav className="courses-tabs" aria-label="Filter by category">
+        <div className="edu-container">
+          <div className="courses-tabs__row" role="tablist">
+            {tabs.map((tab) => {
+              const active = filter === tab.key;
+              return (
+                <button
+                  key={tab.key}
+                  role="tab"
+                  aria-selected={active}
+                  className={`courses-tab${active ? ' is-active' : ''}`}
+                  onClick={() => setFilter(tab.key)}
+                >
+                  {tab.label}
+                  <span className="courses-tab__count">{catalogLoading ? '··' : pad(countFor(tab.key))}</span>
+                </button>
+              );
+            })}
           </div>
         </div>
       </nav>
 
-      {/* Hero Section */}
-      <section className="courses-hero py-5 bg-light">
-        <div className="container">
-          <h1 className="text-center mb-4">Explore Our Courses</h1>
-          <p className="text-center text-muted mb-5">
-            Choose from our wide range of industry-leading programs
-          </p>
-
-          {/* Filter Buttons */}
-          <div className="filter-section d-flex flex-wrap justify-content-center gap-3 mb-5">
-            <button 
-              className={`btn ${filter === 'all' ? 'btn-success' : 'btn-outline-success'}`}
-              onClick={() => setFilter('all')}
-            >
-              All Courses
-            </button>
-            <button 
-              className={`btn ${filter === 'finance' ? 'btn-success' : 'btn-outline-success'}`}
-              onClick={() => setFilter('finance')}
-            >
-              Finance
-            </button>
-            <button 
-              className={`btn ${filter === 'technology' ? 'btn-success' : 'btn-outline-success'}`}
-              onClick={() => setFilter('technology')}
-            >
-              Technology
-            </button>
-            <button 
-              className={`btn ${filter === 'analytics' ? 'btn-success' : 'btn-outline-success'}`}
-              onClick={() => setFilter('analytics')}
-            >
-              Analytics
-            </button>
-            <button 
-              className={`btn ${filter === 'marketing' ? 'btn-success' : 'btn-outline-success'}`}
-              onClick={() => setFilter('marketing')}
-            >
-              Marketing
-            </button>
-            <button 
-              className={`btn ${filter === 'management' ? 'btn-success' : 'btn-outline-success'}`}
-              onClick={() => setFilter('management')}
-            >
-              Management
-            </button>
+      <main className="courses-list-wrap">
+        <div className="edu-container">
+          <div className="courses-list__meta">
+            <span className="edu-label edu-label--ink" aria-live="polite">
+              {activeLabel} <span className="courses-list__sep">/</span>{' '}
+              {firstLoad ? '··' : `${pad(results.length)} ${results.length === 1 ? 'result' : 'results'}`}
+              {search && !firstLoad && (
+                <span className="courses-list__query"> for “{search}”</span>
+              )}
+            </span>
+            <div className="courses-list__tools">
+              {hasFilters && (
+                <button className="edu-link courses-reset" onClick={resetAll}>
+                  Clear filters
+                </button>
+              )}
+              <label className="courses-sort">
+                <span className="edu-label">Sort</span>
+                <select
+                  className="edu-select courses-sort__select"
+                  value={sort}
+                  onChange={(e) => setSort(e.target.value)}
+                >
+                  {SORT_OPTIONS.map((o) => (
+                    <option key={o.value || 'featured'} value={o.value}>{o.label}</option>
+                  ))}
+                </select>
+              </label>
+            </div>
           </div>
-        </div>
-      </section>
 
-      {/* Courses Grid */}
-      <section className="courses-grid py-5">
-        <div className="container">
-          {filteredCourses.length === 0 ? (
-            <div className="text-center py-5">
-              <h4>No courses found</h4>
-              <p className="text-muted">Try selecting a different category</p>
+          {firstLoad ? (
+            <div className="edu-loading courses-loading">
+              <div className="edu-spinner" role="status" aria-label="Loading courses" />
+              <p className="edu-label">Loading programs</p>
+            </div>
+          ) : results.length === 0 ? (
+            <div className="edu-empty courses-empty">
+              <h3 className="edu-h2">Nothing <em>matches.</em></h3>
+              <p className="edu-muted">Try another category, or a shorter search.</p>
+              <button className="edu-btn" onClick={resetAll}>
+                Show everything
+              </button>
             </div>
           ) : (
-            <div className="row g-4">
-              {filteredCourses.map((course) => (
-                <div key={course._id} className="col-md-6 col-lg-4">
-                  <div className="course-card h-100">
-                    <div className="course-card-img">
-                      <img 
-                        src={getThumbnailUrl(course.thumbnail)} 
-                        alt={course.title}
-                        className="img-fluid"
-                        onError={(e) => {
-                          e.target.onerror = null;
-                          e.target.src = 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=800&q=80';
-                        }}
-                      />
-                      {course.duration && (
-                        <span className="course-duration">{course.duration}</span>
-                      )}
-                    </div>
-                    <div className="course-card-body">
-                      {course.category && (
-                        <span className="course-category">{course.category}</span>
-                      )}
-                      <h4 className="course-title">{course.title}</h4>
-                      <p className="course-description">{course.description}</p>
-                      
-                      <div className="course-meta mt-3">
-                        <div className="d-flex justify-content-between align-items-center mb-3">
-                          <span className="text-muted">
-                            <i className="bi bi-book"></i> {course.modules?.length || 0} Modules
-                          </span>
-                          <span className="text-muted">
-                            <i className="bi bi-person"></i> {course.instructor}
-                          </span>
-                        </div>
-                        
-                        <div className="d-flex justify-content-between align-items-center">
-                          <div className="course-price">
-                            <span className="price-amount">₹{course.price || 500}</span>
-                          </div>
-                          <button 
-                            className="btn btn-success"
-                            onClick={() => handleEnroll(course._id)}
-                          >
-                            Enroll Now
-                          </button>
-                        </div>
+            <ol className={`courses-grid${loading ? ' is-refreshing' : ''}`}>
+              {results.map((course, i) => (
+                <li
+                  key={course._id}
+                  className="edu-pop course-card"
+                  role="link"
+                  tabIndex={0}
+                  aria-label={`${course.title} — view program`}
+                  onClick={() => openCourse(course._id)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && e.target === e.currentTarget) openCourse(course._id);
+                  }}
+                >
+                  <div className="course-card__media">
+                    <img
+                      src={thumbUrl(course.thumbnail)}
+                      alt=""
+                      loading="lazy"
+                      onError={(e) => {
+                        e.target.onerror = null;
+                        e.target.src = FALLBACK_THUMB;
+                      }}
+                    />
+                    <span className="course-card__num">{pad(i + 1)}</span>
+                    <WishlistButton
+                      courseId={course._id}
+                      courseTitle={course.title}
+                      className="course-card__wish"
+                    />
+                    {course.category && (
+                      <span className="edu-tag edu-tag--solid course-card__cat">{course.category}</span>
+                    )}
+                  </div>
+
+                  <div className="course-card__body">
+                    <h2 className="course-card__title">{course.title}</h2>
+                    {course.instructor && (
+                      <p className="course-card__by">
+                        with {course.instructor}
+                        {course.level && <span className="course-card__level"> · {course.level}</span>}
+                      </p>
+                    )}
+                    <p className="course-card__desc">{course.description}</p>
+
+                    <dl className="course-card__facts">
+                      <div>
+                        <dt>Length</dt>
+                        <dd>{course.duration || 'Self-paced'}</dd>
                       </div>
+                      <div>
+                        <dt>Modules</dt>
+                        <dd>{pad(course.modules?.length || 0)}</dd>
+                      </div>
+                      <div>
+                        <dt>Rating</dt>
+                        <dd>
+                          {course.ratingCount ? (
+                            <>
+                              <span className="course-card__star" aria-hidden="true">★</span>
+                              {formatRating(course.ratingAvg)}
+                              <span className="course-card__rc"> ({course.ratingCount})</span>
+                            </>
+                          ) : (
+                            <span className="course-card__rc">New</span>
+                          )}
+                        </dd>
+                      </div>
+                    </dl>
+
+                    <div className="course-card__foot">
+                      <div className="course-card__price">
+                        <span className="edu-label">One-time fee</span>
+                        <strong>{formatPrice(course.price || 500)}</strong>
+                      </div>
+                      <button
+                        className="edu-btn edu-btn--accent course-card__cta"
+                        onClick={(e) => handleEnroll(e, course._id)}
+                        aria-label={`Enroll in ${course.title}`}
+                      >
+                        Enroll <span aria-hidden="true">→</span>
+                      </button>
                     </div>
                   </div>
-                </div>
+                </li>
               ))}
-            </div>
+            </ol>
           )}
+        </div>
+      </main>
+
+      <section className="courses-note">
+        <div className="edu-container courses-note__grid">
+          <p className="edu-label edu-label--accent">Not sure?</p>
+          <p className="courses-note__text">
+            Start with the shortest program in a field you already like.
+            <em> Most people come back for a second.</em>
+          </p>
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="bg-dark text-white py-4 mt-5">
-        <div className="container text-center">
-          <p className="mb-0">&copy; 2024 Imarticus Learning. All rights reserved.</p>
-        </div>
-      </footer>
+      <SiteFooter />
     </div>
   );
 };

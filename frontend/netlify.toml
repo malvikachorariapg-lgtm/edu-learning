@@ -1,11 +1,30 @@
-[[redirects]]
-  from = "/*"
-  to = "/index.html"
-  status = 200
-
 [build]
   command = "npm run build"
   publish = "build"
 
-[build.environment]
-  REACT_APP_API_URL = "https://imarticus-lms-backend.onrender.com/api"
+# Set REACT_APP_API_URL in the Netlify UI (Site settings → Environment variables),
+# e.g. https://api.your-domain.com/api
+
+# Hashed JS/CSS bundles never change — cache them for a year at the CDN and browser
+[[headers]]
+  for = "/static/*"
+  [headers.values]
+    Cache-Control = "public, max-age=31536000, immutable"
+
+# index.html must always be revalidated so new deploys are picked up
+[[headers]]
+  for = "/index.html"
+  [headers.values]
+    Cache-Control = "no-cache"
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
+    X-Frame-Options = "DENY"
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

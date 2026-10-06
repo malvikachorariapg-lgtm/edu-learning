@@ -1,0 +1,165 @@
+/* ==========================================================================
+   Invoice — printable receipt for one order. Classes prefixed .inv-
+   ========================================================================== */
+
+.inv { max-width: 880px; display: flex; flex-direction: column; gap: 22px; padding-bottom: 32px; }
+.inv p { margin: 0; }
+.inv-top-btn { min-height: 44px; }
+
+.inv-bar { display: flex; justify-content: space-between; align-items: center; }
+.inv-back {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+}
+.inv-back:hover { color: var(--accent); }
+
+.inv-loading { min-height: 40vh; }
+.inv-empty { display: flex; flex-direction: column; align-items: center; gap: 12px; }
+.inv-empty .edu-h3 { margin: 0; }
+
+/* ---------- Document ---------- */
+.inv-doc { padding: clamp(22px, 4vw, 48px); display: flex; flex-direction: column; gap: 26px; }
+
+.inv-doc__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 20px;
+  flex-wrap: wrap;
+  padding-bottom: 22px;
+  border-bottom: 2px solid var(--ink);
+}
+.inv-doc__brand {
+  font-family: var(--font-display);
+  font-weight: 900;
+  font-size: clamp(1.5rem, 3vw, 2rem);
+  letter-spacing: -0.03em;
+  text-transform: uppercase;
+  line-height: 1;
+  margin-bottom: 8px !important;
+}
+.inv-doc__title { text-align: right; }
+.inv-doc__no {
+  margin-top: 6px !important;
+  font-family: var(--font-display);
+  font-weight: 900;
+  font-size: clamp(1.2rem, 2.4vw, 1.6rem);
+  letter-spacing: 0.02em;
+}
+.inv-doc__muted { display: block; font-size: 0.8rem; color: var(--muted); margin-top: 3px; overflow-wrap: anywhere; }
+
+.inv-stamp {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 8px 14px;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  border: 1px solid currentColor;
+}
+.inv-stamp__dot { width: 8px; height: 8px; background: currentColor; }
+.inv-stamp__why { text-transform: none; letter-spacing: 0; font-weight: 600; }
+.inv-stamp--forest { color: var(--forest); background: var(--forest-soft); }
+.inv-stamp--ochre { color: var(--ochre); background: var(--ochre-soft); }
+.inv-stamp--danger { color: var(--danger); background: var(--danger-soft); }
+.inv-stamp--soft { color: var(--muted); }
+
+.inv-meta {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin: 0;
+  border: 1px solid var(--line);
+}
+.inv-meta > div { padding: 16px 18px; min-width: 0; border-bottom: 1px solid var(--line-soft); }
+.inv-meta > div:nth-child(odd) { border-right: 1px solid var(--line-soft); }
+.inv-meta > div:nth-last-child(-n + 2) { border-bottom: 0; }
+.inv-meta dt, .inv-sums dt {
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.inv-meta dt { margin-bottom: 6px; }
+.inv-meta dd { margin: 0; font-weight: 600; overflow-wrap: anywhere; }
+.inv-mono { font-variant-numeric: tabular-nums; letter-spacing: 0.02em; }
+
+.inv-table-wrap { overflow-x: auto; }
+.inv-table { width: 100%; border-collapse: collapse; font-size: 0.95rem; }
+.inv-table th {
+  text-align: left;
+  padding: 10px 0;
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--muted);
+  border-bottom: 1px solid var(--line);
+}
+.inv-table td { padding: 16px 0; border-bottom: 1px solid var(--line-soft); vertical-align: top; }
+.inv-table td + td, .inv-table th + th { padding-left: 16px; }
+.inv-r { text-align: right !important; white-space: nowrap; font-weight: 700; }
+.inv-item { font-family: var(--font-display); font-weight: 800; font-size: 1.05rem; }
+
+.inv-sums { margin: 0 0 0 auto; width: min(100%, 360px); display: flex; flex-direction: column; }
+.inv-sums > div { display: flex; justify-content: space-between; align-items: baseline; gap: 16px; padding: 8px 0; }
+.inv-sums dd { margin: 0; font-weight: 700; white-space: nowrap; }
+.inv-sums__discount dt, .inv-sums__discount dd { color: var(--forest); }
+.inv-sums__total {
+  margin-top: 8px;
+  padding: 16px 18px !important;
+  background: var(--ink);
+  color: var(--ink-inverse);
+}
+.inv-sums__total dt { color: var(--ink-inverse); }
+.inv-sums__total dd {
+  font-family: var(--font-display);
+  font-weight: 900;
+  font-size: clamp(1.6rem, 3.4vw, 2.2rem);
+  letter-spacing: -0.03em;
+  line-height: 1;
+}
+
+.inv-doc__foot { padding-top: 18px; border-top: 1px dashed var(--line); display: flex; flex-direction: column; gap: 6px; }
+.inv-doc__foot p { font-size: 0.8rem; color: var(--muted); }
+
+.inv-actions { display: flex; flex-wrap: wrap; gap: 14px; }
+
+@media (max-width: 560px) {
+  .inv-doc__title { text-align: left; }
+  .inv-meta { grid-template-columns: minmax(0, 1fr); }
+  .inv-meta > div:nth-child(odd) { border-right: 0; }
+  .inv-meta > div:nth-last-child(2) { border-bottom: 1px solid var(--line-soft); }
+  .inv-actions .edu-btn { flex: 1 1 100%; justify-content: center; }
+}
+
+/* ---------- Print: just the document, ink on paper ---------- */
+@media print {
+  @page { margin: 14mm; }
+  :root, html, body { color-scheme: light !important; background: Canvas !important; }
+  body::before, body::after { display: none !important; }
+  body, body * { transition: none !important; }
+  .app-shell, .app-shell__main, .app-shell__content, .inv { display: block !important; background: transparent !important; min-height: 0 !important; }
+  .app-shell__side, .app-shell__top, .app-shell__scrim, .inv-bar, .inv-actions, .edu-toasts { display: none !important; }
+  .app-shell__main, .app-shell__content { padding: 0 !important; margin: 0 !important; }
+  .inv { max-width: none; padding: 0; }
+  .inv-doc, .inv-doc * {
+    color: CanvasText !important;
+    background: transparent !important;
+    border-color: GrayText !important;
+  }
+  .inv-doc { margin: 0; border: 0; padding: 0; }
+  .inv-doc::before, .inv-doc::after { display: none; }
+  .inv-sums__total { border: 2px solid CanvasText !important; }
+  .inv-stamp, .inv-meta, .inv-table, .inv-sums { break-inside: avoid; }
+}

@@ -1,945 +1,371 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useEffect, useMemo, useState } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import './LandingPage.css';
-import logo from '../assests/logo.svg';
+import SiteHeader from '../components/SiteHeader';
+import PromoBar from '../components/PromoBar';
+import SiteFooter from '../components/SiteFooter';
+import { getAllCourses } from '../services/api';
+import { CATEGORIES, SERVER_URL } from '../brand';
+
+const SKILLS = [
+  'Financial modelling', 'SQL', 'React', 'Python', 'Power BI', 'Valuation',
+  'Product thinking', 'Performance marketing', 'Cloud', 'Negotiation',
+  'Statistics', 'Copywriting', 'System design'
+];
+
+const METHOD = [
+  { n: '01', title: 'Watch', body: 'Short lessons you finish on a commute. No three-hour lectures, no filler.' },
+  { n: '02', title: 'Build', body: 'Every module ends with a real brief — a model, an app, a campaign.' },
+  { n: '03', title: 'Get reviewed', body: 'A working practitioner marks your work line by line. Then you fix it.' },
+  { n: '04', title: 'Show it', body: 'You leave with finished work people can open, not a folder of certificates.' }
+];
+
+const VOICES = [
+  {
+    quote: 'The reviews were blunt in the best way. My third model was nothing like my first.',
+    name: 'Aditi R.',
+    meta: 'Finance · now Analyst'
+  },
+  {
+    quote: 'Two years of tutorials. Six weeks of shipping every Friday did more.',
+    name: 'Karan M.',
+    meta: 'Technology · Frontend Dev'
+  },
+  {
+    quote: 'Small group, a mentor who remembered my work. That is the whole trick.',
+    name: 'Neha S.',
+    meta: 'Marketing · Growth Lead'
+  }
+];
+
+const FAQ = [
+  {
+    q: 'Do I need prior experience?',
+    a: 'No. Each program states its starting point. Beginner tracks assume nothing beyond curiosity and about 6–8 hours a week.'
+  },
+  {
+    q: 'How are classes run?',
+    a: 'Recorded lessons for concepts, one live class and one studio hour each week, plus a weekly assignment reviewed by your mentor.'
+  },
+  {
+    q: 'Can I choose my own pace?',
+    a: 'Yes. Pick any start and end date when you enrol — one intense week or a relaxed few months. We show how many hours a day your plan needs, and you can change it any time from your dashboard.'
+  },
+  {
+    q: 'Can I get a summary of the reading material?',
+    a: 'Yes. Documents attached to lessons can be summarised by AI inside the classroom, so you revise faster.'
+  },
+  {
+    q: 'What if I fall behind?',
+    a: 'All lessons stay available. Your mentor can move your review slot so you catch up without losing your place.'
+  }
+];
+
+const thumbUrl = (thumb) => {
+  if (!thumb) return null;
+  return /^https?:\/\//.test(thumb) ? thumb : `${SERVER_URL}${thumb}`;
+};
 
 const LandingPage = () => {
   const navigate = useNavigate();
+  const location = useLocation();
+  const [courses, setCourses] = useState([]);
+  const [coursesLoading, setCoursesLoading] = useState(true);
+  const [activeCategory, setActiveCategory] = useState('finance');
   const [selectedInterest, setSelectedInterest] = useState(null);
-  const [scrollPosition, setScrollPosition] = useState(0);
+  const [quizError, setQuizError] = useState(false);
+  const [openFaq, setOpenFaq] = useState(0);
 
-  // Smooth scrolling animation for student profiles
-  React.useEffect(() => {
-    const interval = setInterval(() => {
-      setScrollPosition(prev => (prev + 1) % 100);
-    }, 30);
-    return () => clearInterval(interval);
+  useEffect(() => {
+    getAllCourses()
+      .then((res) => setCourses(res.data?.data || []))
+      .catch(() => setCourses([]))
+      .finally(() => setCoursesLoading(false));
   }, []);
 
-  const handleApplyNow = () => {
-    navigate('/courses');
-  };
+  // Header links on other pages send us here with a section to scroll to
+  useEffect(() => {
+    const target = location.state?.scrollTo;
+    if (target) {
+      setTimeout(() => document.getElementById(target)?.scrollIntoView({ behavior: 'smooth' }), 50);
+    }
+  }, [location.state]);
+
+  const countByCategory = useMemo(() => {
+    const counts = {};
+    courses.forEach((c) => { counts[c.category] = (counts[c.category] || 0) + 1; });
+    return counts;
+  }, [courses]);
+
+  const visibleCourses = courses.filter((c) => c.category === activeCategory).slice(0, 3);
 
   const handleQuizNext = () => {
     if (selectedInterest) {
-      // Navigate to courses page with selected interest
       navigate('/courses', { state: { interest: selectedInterest } });
     } else {
-      alert('Please select an option to continue');
+      setQuizError(true);
     }
   };
 
-  const handleNavigation = (section) => {
-    if (section === 'courses') {
-      // Navigate to courses page
-      navigate('/courses');
-    } else {
-      // For other sections, scroll within the page
-      const element = document.getElementById(section);
-      if (element) {
-        element.scrollIntoView({ behavior: 'smooth' });
-      }
-    }
-  };
+  const today = new Date();
+  const todayLabel = today.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit' });
 
   return (
-    <div className="landing-page">
-      {/* Navigation Header */}
-      <nav className="navbar navbar-expand-lg navbar-light bg-white sticky-top shadow-sm">
-        <div className="container">
-          <a className="navbar-brand d-flex align-items-center" href="#home">
-            <img src={logo} alt="Imarticus Learning" height="50" />
-          </a>
-          <button className="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-            <span className="navbar-toggler-icon"></span>
-          </button>
-          <div className="collapse navbar-collapse" id="navbarNav">
-            <ul className="navbar-nav ms-auto">
-              <li className="nav-item">
-                <button className="nav-link btn btn-link" onClick={() => handleNavigation('courses')}>All Programs</button>
-              </li>
-              <li className="nav-item">
-                <button className="nav-link btn btn-link" onClick={() => handleNavigation('placement-section')}>Career Services</button>
-              </li>
-              <li className="nav-item">
-                <button className="nav-link btn btn-link" onClick={() => handleNavigation('curriculum-section')}>Discover</button>
-              </li>
-              <li className="nav-item">
-                <button className="nav-link btn btn-link" onClick={() => handleNavigation('leaders-section')}>For Enterprise</button>
-              </li>
-              <li className="nav-item">
-                <button className="btn btn-outline-success ms-2" onClick={() => navigate('/auth')}>Login</button>
-              </li>
-            </ul>
+    <div className="landing">
+      <SiteHeader />
+      <PromoBar />
+
+      {/* Hero */}
+      <section className="lp-hero">
+        <div className="edu-container lp-hero__grid">
+          <div className="lp-hero__copy">
+            <p className="lp-hero__kicker">
+              <span className="lp-dot" aria-hidden="true" />
+              Admissions open · start any day, finish at your pace
+            </p>
+            <h1 className="edu-display lp-hero__title">
+              Skills that<br /><em>pay off.</em>
+            </h1>
+            <p className="edu-lead lp-hero__lead">
+              Mentor-led programs for people who'd rather build than binge tutorials.
+              Small cohorts. Real briefs. Every piece of work reviewed by someone who does this for a living.
+            </p>
+            <div className="lp-hero__cta">
+              <button className="edu-btn edu-btn--lg edu-btn--accent" onClick={() => navigate('/courses')}>
+                Browse programs →
+              </button>
+              <button className="edu-btn edu-btn--lg edu-btn--ghost" onClick={() => document.getElementById('method')?.scrollIntoView({ behavior: 'smooth' })}>
+                How it works
+              </button>
+            </div>
+          </div>
+
+          {/* The pass — a membership card */}
+          <div className="lp-pass-wrap" aria-hidden="true">
+            <div className="lp-pass">
+              <div className="lp-pass__top">
+                <span className="lp-pass__brand"><em>Edu</em> Learning</span>
+                <span className="lp-pass__tier">Learner pass</span>
+              </div>
+              <div className="lp-pass__chip" />
+              <div className="lp-pass__number">
+                <span>0014</span><span>1:12</span><span>YOUR</span><span>PACE</span>
+              </div>
+              <div className="lp-pass__bottom">
+                <div>
+                  <span className="lp-pass__k">Member</span>
+                  <span className="lp-pass__v">You, probably</span>
+                </div>
+                <div>
+                  <span className="lp-pass__k">Starts</span>
+                  <span className="lp-pass__v">{todayLabel}</span>
+                </div>
+              </div>
+            </div>
+            <div className="lp-pass lp-pass--back" />
           </div>
         </div>
-      </nav>
 
-      {/* Hero Section */}
-      <section className="hero-section">
-        <div className="container">
-          <div className="row align-items-center">
-            <div className="col-lg-6">
-              <h1 className="hero-title animate-fade-in">
-                <span className="highlight">Real Learning</span><br />
-                that delivers your<br />
-                <span className="text-dark">career goals</span>
-              </h1>
-              <p className="hero-subtitle animate-fade-in" style={{animationDelay: '0.3s'}}>
-                <strong>Unmatched Outcomes</strong> from job-ready, certification, and executive programs
-              </p>
-              <button className="btn btn-success btn-lg mt-4 animate-fade-in pulse-on-hover" style={{animationDelay: '0.6s'}} onClick={handleApplyNow}>
-                Explore Our Programs →
-              </button>
-
-              {/* Stats */}
-              <div className="stats-section mt-5">
-                <div className="row">
-                  <div className="col-6 col-md-3 mb-3 animate-count-up">
-                    <h3 className="stat-number">10 Lakh+</h3>
-                    <p className="stat-label">Careers Transformed</p>
-                  </div>
-                  <div className="col-6 col-md-3 mb-3 animate-count-up" style={{animationDelay: '0.2s'}}>
-                    <h3 className="stat-number">#1 in</h3>
-                    <p className="stat-label">Job-Ready Programs</p>
-                  </div>
-                  <div className="col-6 col-md-3 mb-3 animate-count-up" style={{animationDelay: '0.4s'}}>
-                    <h3 className="stat-number">3500+</h3>
-                    <p className="stat-label">Hiring Partners</p>
-                  </div>
-                  <div className="col-6 col-md-3 mb-3 animate-count-up" style={{animationDelay: '0.6s'}}>
-                    <h3 className="stat-number">3X</h3>
-                    <p className="stat-label">Salary Growth</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Ratings */}
-              <div className="ratings-section mt-4 animate-fade-in" style={{animationDelay: '0.8s'}}>
-                <div className="d-flex flex-wrap gap-3">
-                  <div className="rating-badge">
-                    <span className="stars">⭐ 4.7</span>
-                    <span className="platform">Google</span>
-                  </div>
-                  <div className="rating-badge">
-                    <span className="stars">⭐ 4.5</span>
-                    <span className="platform">Facebook</span>
-                  </div>
-                  <div className="rating-badge">
-                    <span className="stars">⭐ 4.5</span>
-                    <span className="platform">Trustpilot</span>
-                  </div>
-                  <div className="rating-badge">
-                    <span className="stars">⭐ 4.6</span>
-                    <span className="platform">CourseReport</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="col-lg-6">
-              <div className="success-stories-horizontal">
-                <div className="stories-scroll-wrapper">
-                  <div className="stories-scroll-track">
-                    {/* Student Success Stories - Horizontal Cards */}
-                    {[
-                      {
-                        name: 'Riya Israni',
-                        company: 'Flipkart',
-                        role: 'Data Analyst',
-                        program: 'PGA in Data Science',
-                        badge: 'Fresher Upskilled',
-                        image: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=300'
-                      },
-                      {
-                        name: 'Hussain Johar',
-                        company: 'GSKA & CO.',
-                        role: 'Tax Assistant',
-                        program: 'US CPA Program',
-                        badge: 'US CPA',
-                        image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300'
-                      },
-                      {
-                        name: 'Timir Naha',
-                        company: 'Digital Marketing Co.',
-                        role: 'Marketing Manager',
-                        program: "IIT Roorkee's Certificate",
-                        badge: 'Career Switcher',
-                        image: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=300'
-                      },
-                      {
-                        name: 'Priya Sharma',
-                        company: 'Goldman Sachs',
-                        role: 'IB Analyst',
-                        program: 'Investment Banking Pro',
-                        badge: 'Freshers Placed',
-                        image: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=300'
-                      },
-                      {
-                        name: 'Rahul Verma',
-                        company: 'Amazon',
-                        role: 'Cloud Architect',
-                        program: 'AWS Cloud Computing',
-                        badge: 'Career Growth',
-                        image: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?w=300'
-                      }
-                    ].map((student, idx) => (
-                      <div key={idx} className="story-card-horizontal">
-                        <div className="story-card-content">
-                          <div className="student-badge">{student.badge}</div>
-                          <div className="student-image-section">
-                            <img src={student.image} alt={student.name} className="student-avatar" />
-                          </div>
-                          <div className="student-info">
-                            <h6 className="student-name-horizontal">{student.name}</h6>
-                            <p className="student-role-horizontal">{student.role}</p>
-                            <p className="student-program">{student.program}</p>
-                          </div>
-                          <div className="company-tag">
-                            <span>Started at: <strong>{student.company}</strong></span>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                    {/* Duplicate for seamless loop */}
-                    {[
-                      {
-                        name: 'Riya Israni',
-                        company: 'Flipkart',
-                        role: 'Data Analyst',
-                        program: 'PGA in Data Science',
-                        badge: 'Fresher Upskilled',
-                        image: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=300'
-                      },
-                      {
-                        name: 'Hussain Johar',
-                        company: 'GSKA & CO.',
-                        role: 'Tax Assistant',
-                        program: 'US CPA Program',
-                        badge: 'US CPA',
-                        image: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=300'
-                      },
-                      {
-                        name: 'Timir Naha',
-                        company: 'Digital Marketing Co.',
-                        role: 'Marketing Manager',
-                        program: "IIT Roorkee's Certificate",
-                        badge: 'Career Switcher',
-                        image: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=300'
-                      }
-                    ].map((student, idx) => (
-                      <div key={`dup-${idx}`} className="story-card-horizontal">
-                        <div className="story-card-content">
-                          <div className="student-badge">{student.badge}</div>
-                          <div className="student-image-section">
-                            <img src={student.image} alt={student.name} className="student-avatar" />
-                          </div>
-                          <div className="student-info">
-                            <h6 className="student-name-horizontal">{student.name}</h6>
-                            <p className="student-role-horizontal">{student.role}</p>
-                            <p className="student-program">{student.program}</p>
-                          </div>
-                          <div className="company-tag">
-                            <span>Started at: <strong>{student.company}</strong></span>
-                          </div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
+        <div className="edu-container">
+          <dl className="lp-facts">
+            <div><dt>Mentor ratio</dt><dd>1:12</dd></div>
+            <div><dt>Programs</dt><dd>{courses.length || 15}</dd></div>
+            <div><dt>Fields</dt><dd>{CATEGORIES.length}</dd></div>
+            <div><dt>Graded by</dt><dd>Humans</dd></div>
+          </dl>
         </div>
       </section>
 
-      {/* Prestigious Academies Section */}
-      <section className="academies-section py-5 bg-success text-white">
-        <div className="container-fluid">
-          <h2 className="text-center mb-2 animate-fade-in">The most prestigious academies</h2>
-          <p className="text-center mb-5 animate-fade-in">
-            Our courses are partnered with top universities for globally recognized certifications
-          </p>
-          
-          {/* Top Row - Scroll Right to Left */}
-          <div className="scroll-container mb-3">
-            <div className="scroll-track scroll-rtl">
-              {['KPMG', 'Skill India', 'IIMA', 'XLRI', 'ACCA', 'AICPA', 'NISM', 'CFA', 'IMA', 'FRM', 'CIMA', 'CME'].map((partner, idx) => (
-                <div key={idx} className="partner-badge">
-                  <span className="partner-name">{partner}</span>
-                </div>
-              ))}
-              {/* Duplicate for seamless loop */}
-              {['KPMG', 'Skill India', 'IIMA', 'XLRI', 'ACCA', 'AICPA', 'NISM', 'CFA', 'IMA', 'FRM', 'CIMA', 'CME'].map((partner, idx) => (
-                <div key={`dup1-${idx}`} className="partner-badge">
-                  <span className="partner-name">{partner}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Bottom Row - Scroll Left to Right */}
-          <div className="scroll-container">
-            <div className="scroll-track scroll-ltr">
-              {['NSE', 'BSE', 'SEBI', 'RBI', 'IIT Delhi', 'IIT Bombay', 'IIT Madras', 'ISB', 'NMIMS', 'SP Jain', 'MICA', 'MDI'].map((partner, idx) => (
-                <div key={idx} className="partner-badge">
-                  <span className="partner-name">{partner}</span>
-                </div>
-              ))}
-              {/* Duplicate for seamless loop */}
-              {['NSE', 'BSE', 'SEBI', 'RBI', 'IIT Delhi', 'IIT Bombay', 'IIT Madras', 'ISB', 'NMIMS', 'SP Jain', 'MICA', 'MDI'].map((partner, idx) => (
-                <div key={`dup2-${idx}`} className="partner-badge">
-                  <span className="partner-name">{partner}</span>
-                </div>
-              ))}
-            </div>
-          </div>
+      {/* Skills ticker */}
+      <div className="lp-ticker edu-marquee" aria-hidden="true">
+        <div className="edu-marquee__track">
+          {[...SKILLS, ...SKILLS].map((s, i) => <span key={i}>{s}</span>)}
         </div>
-      </section>
+      </div>
 
-      {/* Curriculum Section */}
-      <section id="curriculum-section" className="curriculum-section py-5">
-        <div className="container">
-          <h2 className="text-center mb-4">
-            Learn using a <span className="text-success">curriculum built by industry</span>
-          </h2>
-          <p className="text-center text-muted mb-5">
-            Designed to meet market demands and propel your career success
-          </p>
+      {/* Programs */}
+      <section className="edu-section" id="programs">
+        <div className="edu-container">
+          <div className="lp-head">
+            <p className="edu-index"><span>01</span><span>Programs</span></p>
+            <h2 className="edu-h1">Pick a field.<br /><em>Start this month.</em></h2>
+          </div>
 
-          {/* Category Tabs */}
-          <ul className="nav nav-tabs justify-content-center mb-5" id="courseTabs" role="tablist">
-            <li className="nav-item" role="presentation">
-              <button className="nav-link active" id="finance-tab" data-bs-toggle="tab" data-bs-target="#finance" type="button">
-                Finance
+          <div className="lp-chips" role="tablist">
+            {CATEGORIES.map((c) => (
+              <button
+                key={c.key}
+                role="tab"
+                aria-selected={activeCategory === c.key}
+                className={`lp-chip${activeCategory === c.key ? ' is-active' : ''}`}
+                onClick={() => setActiveCategory(c.key)}
+              >
+                {c.label}
+                <span className="lp-chip__count">{countByCategory[c.key] || 0}</span>
               </button>
-            </li>
-            <li className="nav-item" role="presentation">
-              <button className="nav-link" id="analytics-tab" data-bs-toggle="tab" data-bs-target="#analytics" type="button">
-                Analytics
-              </button>
-            </li>
-            <li className="nav-item" role="presentation">
-              <button className="nav-link" id="marketing-tab" data-bs-toggle="tab" data-bs-target="#marketing" type="button">
-                Marketing
-              </button>
-            </li>
-            <li className="nav-item" role="presentation">
-              <button className="nav-link" id="technology-tab" data-bs-toggle="tab" data-bs-target="#technology" type="button">
-                Technology
-              </button>
-            </li>
-            <li className="nav-item" role="presentation">
-              <button className="nav-link" id="management-tab" data-bs-toggle="tab" data-bs-target="#management" type="button">
-                General Management
-              </button>
-            </li>
-          </ul>
-
-          {/* Course Cards */}
-          <div className="tab-content" id="courseTabsContent">
-            {/* Finance Tab */}
-            <div className="tab-pane fade show active" id="finance" role="tabpanel">
-              <div className="row g-4">
-                <div className="col-md-4">
-                  <div className="card course-card h-100">
-                    <img src="https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?w=400" className="card-img-top" alt="Course" />
-                    <div className="card-body">
-                      <span className="badge bg-light text-dark mb-2">3 or 6 Months | Classroom or Live Online Training</span>
-                      <h5 className="card-title">Certified Investment Banking Operations Professional</h5>
-                      <ul className="list-unstyled">
-                        <li>✓ 100% Job Assurance</li>
-                        <li>✓ 1200+ Batches Completed</li>
-                      </ul>
-                      <p className="fw-bold">36000+ Placements</p>
-                      <div className="company-logos mt-3">
-                        <small className="text-muted">JP Morgan | Goldman Sachs | Nomura</small>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="col-md-4">
-                  <div className="card course-card h-100">
-                    <img src="https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?w=400" className="card-img-top" alt="Course" />
-                    <div className="card-body">
-                      <span className="badge bg-light text-dark mb-2">4 or 8 Months | Classroom or Online Training</span>
-                      <h5 className="card-title">Postgraduate Financial Analysis Program</h5>
-                      <ul className="list-unstyled">
-                        <li>✓ 100% Job Assurance</li>
-                        <li>✓ 18 LPA Highest Salary</li>
-                      </ul>
-                      <p className="fw-bold">4500+ Career Transitions</p>
-                      <div className="company-logos mt-3">
-                        <small className="text-muted">Bank of America | BNP Paribas | Capgemini</small>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="col-md-4">
-                  <div className="card course-card h-100">
-                    <img src="https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=400" className="card-img-top" alt="Course" />
-                    <div className="card-body">
-                      <span className="badge bg-light text-dark mb-2">3 Months | Classroom Training</span>
-                      <h5 className="card-title">Postgraduate Program in Banking and Finance</h5>
-                      <ul className="list-unstyled">
-                        <li>✓ 100% Job Assurance</li>
-                        <li>✓ 10000+ Learners Impacted</li>
-                      </ul>
-                      <p className="fw-bold">85% Placement Record</p>
-                      <div className="company-logos mt-3">
-                        <small className="text-muted">Genpact</small>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Analytics Tab */}
-            <div className="tab-pane fade" id="analytics" role="tabpanel">
-              <div className="row g-4">
-                <div className="col-md-4">
-                  <div className="card course-card h-100">
-                    <img src="https://images.unsplash.com/photo-1551288049-bebda4e38f71?w=400" className="card-img-top" alt="Course" />
-                    <div className="card-body">
-                      <span className="badge bg-light text-dark mb-2">6 Months | Live Online Training</span>
-                      <h5 className="card-title">Data Science with Python</h5>
-                      <ul className="list-unstyled">
-                        <li>✓ Industry Projects</li>
-                        <li>✓ 500+ Hiring Partners</li>
-                      </ul>
-                      <p className="fw-bold">92% Placement Rate</p>
-                      <div className="company-logos mt-3">
-                        <small className="text-muted">Amazon | Microsoft | IBM</small>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="col-md-4">
-                  <div className="card course-card h-100">
-                    <img src="https://images.unsplash.com/photo-1504868584819-f8e8b4b6d7e3?w=400" className="card-img-top" alt="Course" />
-                    <div className="card-body">
-                      <span className="badge bg-light text-dark mb-2">5 Months | Online Training</span>
-                      <h5 className="card-title">Business Analytics with Power BI</h5>
-                      <ul className="list-unstyled">
-                        <li>✓ Certified Program</li>
-                        <li>✓ Real-world Projects</li>
-                      </ul>
-                      <p className="fw-bold">1000+ Students Trained</p>
-                      <div className="company-logos mt-3">
-                        <small className="text-muted">Deloitte | Accenture | EY</small>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="col-md-4">
-                  <div className="card course-card h-100">
-                    <img src="https://images.unsplash.com/photo-1460925895917-afdab827c52f?w=400" className="card-img-top" alt="Course" />
-                    <div className="card-body">
-                      <span className="badge bg-light text-dark mb-2">4 Months | Classroom Training</span>
-                      <h5 className="card-title">Advanced Analytics Program</h5>
-                      <ul className="list-unstyled">
-                        <li>✓ Job Guarantee</li>
-                        <li>✓ 12 LPA Average Package</li>
-                      </ul>
-                      <p className="fw-bold">95% Satisfaction Rate</p>
-                      <div className="company-logos mt-3">
-                        <small className="text-muted">Google | Facebook | Twitter</small>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Marketing Tab */}
-            <div className="tab-pane fade" id="marketing" role="tabpanel">
-              <div className="row g-4">
-                <div className="col-md-4">
-                  <div className="card course-card h-100">
-                    <img src="https://images.unsplash.com/photo-1432888622747-4eb9a8f2c293?w=400" className="card-img-top" alt="Course" />
-                    <div className="card-body">
-                      <span className="badge bg-light text-dark mb-2">3 Months | Online Training</span>
-                      <h5 className="card-title">Digital Marketing Mastery</h5>
-                      <ul className="list-unstyled">
-                        <li>✓ Google Certification</li>
-                        <li>✓ Live Projects</li>
-                      </ul>
-                      <p className="fw-bold">2000+ Careers Transformed</p>
-                      <div className="company-logos mt-3">
-                        <small className="text-muted">Ogilvy | WPP | Publicis</small>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="col-md-4">
-                  <div className="card course-card h-100">
-                    <img src="https://images.unsplash.com/photo-1557804506-669a67965ba0?w=400" className="card-img-top" alt="Course" />
-                    <div className="card-body">
-                      <span className="badge bg-light text-dark mb-2">4 Months | Hybrid Training</span>
-                      <h5 className="card-title">Social Media Marketing Pro</h5>
-                      <ul className="list-unstyled">
-                        <li>✓ Meta Certified</li>
-                        <li>✓ Industry Mentors</li>
-                      </ul>
-                      <p className="fw-bold">88% Placement Success</p>
-                      <div className="company-logos mt-3">
-                        <small className="text-muted">Meta | LinkedIn | Twitter</small>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="col-md-4">
-                  <div className="card course-card h-100">
-                    <img src="https://images.unsplash.com/photo-1533750516457-a7f992034fec?w=400" className="card-img-top" alt="Course" />
-                    <div className="card-body">
-                      <span className="badge bg-light text-dark mb-2">5 Months | Live Online</span>
-                      <h5 className="card-title">Content Marketing Specialist</h5>
-                      <ul className="list-unstyled">
-                        <li>✓ Portfolio Building</li>
-                        <li>✓ Freelance Ready</li>
-                      </ul>
-                      <p className="fw-bold">1500+ Success Stories</p>
-                      <div className="company-logos mt-3">
-                        <small className="text-muted">HubSpot | Mailchimp | Buffer</small>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Technology Tab */}
-            <div className="tab-pane fade" id="technology" role="tabpanel">
-              <div className="row g-4">
-                <div className="col-md-4">
-                  <div className="card course-card h-100">
-                    <img src="https://images.unsplash.com/photo-1517694712202-14dd9538aa97?w=400" className="card-img-top" alt="Course" />
-                    <div className="card-body">
-                      <span className="badge bg-light text-dark mb-2">6 Months | Classroom Training</span>
-                      <h5 className="card-title">Full Stack Web Development Bootcamp</h5>
-                      <ul className="list-unstyled">
-                        <li>✓ MERN Stack</li>
-                        <li>✓ 100% Job Support</li>
-                      </ul>
-                      <p className="fw-bold">3000+ Developers Trained</p>
-                      <div className="company-logos mt-3">
-                        <small className="text-muted">Amazon | Flipkart | Paytm</small>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="col-md-4">
-                  <div className="card course-card h-100">
-                    <img src="https://images.unsplash.com/photo-1451187580459-43490279c0fa?w=400" className="card-img-top" alt="Course" />
-                    <div className="card-body">
-                      <span className="badge bg-light text-dark mb-2">5 Months | Online Training</span>
-                      <h5 className="card-title">Cloud Computing with AWS</h5>
-                      <ul className="list-unstyled">
-                        <li>✓ AWS Certification</li>
-                        <li>✓ Hands-on Labs</li>
-                      </ul>
-                      <p className="fw-bold">15 LPA Average Package</p>
-                      <div className="company-logos mt-3">
-                        <small className="text-muted">Amazon | Microsoft Azure | Google Cloud</small>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="col-md-4">
-                  <div className="card course-card h-100">
-                    <img src="https://images.unsplash.com/photo-1555949963-aa79dcee981c?w=400" className="card-img-top" alt="Course" />
-                    <div className="card-body">
-                      <span className="badge bg-light text-dark mb-2">4 Months | Live Online</span>
-                      <h5 className="card-title">Machine Learning & AI</h5>
-                      <ul className="list-unstyled">
-                        <li>✓ IIT Certification</li>
-                        <li>✓ Research Projects</li>
-                      </ul>
-                      <p className="fw-bold">2500+ AI Engineers Created</p>
-                      <div className="company-logos mt-3">
-                        <small className="text-muted">Google | NVIDIA | OpenAI</small>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Management Tab */}
-            <div className="tab-pane fade" id="management" role="tabpanel">
-              <div className="row g-4">
-                <div className="col-md-4">
-                  <div className="card course-card h-100">
-                    <img src="https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?w=400" className="card-img-top" alt="Course" />
-                    <div className="card-body">
-                      <span className="badge bg-light text-dark mb-2">12 Months | Executive Program</span>
-                      <h5 className="card-title">Executive MBA Program</h5>
-                      <ul className="list-unstyled">
-                        <li>✓ IIM Certification</li>
-                        <li>✓ C-Suite Mentors</li>
-                      </ul>
-                      <p className="fw-bold">25 LPA Average CTC</p>
-                      <div className="company-logos mt-3">
-                        <small className="text-muted">McKinsey | BCG | Bain</small>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="col-md-4">
-                  <div className="card course-card h-100">
-                    <img src="https://images.unsplash.com/photo-1542744173-8e7e53415bb0?w=400" className="card-img-top" alt="Course" />
-                    <div className="card-body">
-                      <span className="badge bg-light text-dark mb-2">6 Months | Weekend Program</span>
-                      <h5 className="card-title">Product Management Bootcamp</h5>
-                      <ul className="list-unstyled">
-                        <li>✓ Industry Projects</li>
-                        <li>✓ PM Certification</li>
-                      </ul>
-                      <p className="fw-bold">1200+ Product Managers</p>
-                      <div className="company-logos mt-3">
-                        <small className="text-muted">Google | Amazon | Microsoft</small>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="col-md-4">
-                  <div className="card course-card h-100">
-                    <img src="https://images.unsplash.com/photo-1521737604893-d14cc237f11d?w=400" className="card-img-top" alt="Course" />
-                    <div className="card-body">
-                      <span className="badge bg-light text-dark mb-2">8 Months | Online Program</span>
-                      <h5 className="card-title">Strategic Management Program</h5>
-                      <ul className="list-unstyled">
-                        <li>✓ ISB Certification</li>
-                        <li>✓ Case Studies</li>
-                      </ul>
-                      <p className="fw-bold">800+ Senior Leaders</p>
-                      <div className="company-logos mt-3">
-                        <small className="text-muted">Deloitte | KPMG | PwC</small>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Quiz Section */}
-      <section className="quiz-section py-5 bg-success text-white">
-        <div className="container">
-          <div className="row align-items-center">
-            <div className="col-lg-6">
-              <h2 className="mb-4">Unsure about which program meets your requirements?</h2>
-              <p className="h5 mb-4">TAKE OUR QUIZ!</p>
-              
-              <div className="quiz-options">
-                <div className="form-check mb-3">
-                  <input className="form-check-input" type="radio" name="interest" id="finance" 
-                    onChange={() => setSelectedInterest('finance')} />
-                  <label className="form-check-label h5" htmlFor="finance">
-                    Finance
-                  </label>
-                </div>
-                <div className="form-check mb-3">
-                  <input className="form-check-input" type="radio" name="interest" id="technology" 
-                    onChange={() => setSelectedInterest('technology')} />
-                  <label className="form-check-label h5" htmlFor="technology">
-                    Technology
-                  </label>
-                </div>
-                <div className="form-check mb-3">
-                  <input className="form-check-input" type="radio" name="interest" id="marketing" 
-                    onChange={() => setSelectedInterest('marketing')} />
-                  <label className="form-check-label h5" htmlFor="marketing">
-                    Marketing
-                  </label>
-                </div>
-                <div className="form-check mb-3">
-                  <input className="form-check-input" type="radio" name="interest" id="analytics" 
-                    onChange={() => setSelectedInterest('analytics')} />
-                  <label className="form-check-label h5" htmlFor="analytics">
-                    Analytics
-                  </label>
-                </div>
-                <div className="form-check mb-3">
-                  <input className="form-check-input" type="radio" name="interest" id="management" 
-                    onChange={() => setSelectedInterest('management')} />
-                  <label className="form-check-label h5" htmlFor="management">
-                    Management
-                  </label>
-                </div>
-              </div>
-
-              <button className="btn btn-light btn-lg mt-4" onClick={handleQuizNext}>
-                Next →
-              </button>
-              <p className="mt-3">1/3</p>
-            </div>
-
-            <div className="col-lg-6">
-              <img src="https://t4.ftcdn.net/jpg/04/67/95/73/360_F_467957383_3yRd5rVS1KcK6mjVNXaNwnGkxe2JOqDu.jpg" 
-                alt="Student" className="img-fluid rounded" />
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Industry Leaders Section */}
-      <section id="leaders-section" className="leaders-section py-5">
-        <div className="container-fluid">
-          <h2 className="text-center mb-2 animate-fade-in">
-            We place you with <span className="text-success">industry leaders</span> in every field
-          </h2>
-          <p className="text-center text-muted mb-5 animate-fade-in">3500+ leading companies hire our learners</p>
-
-          {/* Row 1 - Scroll Left to Right */}
-          <div className="scroll-container mb-3">
-            <div className="scroll-track scroll-ltr">
-              {['J.P. Morgan', 'Goldman Sachs', 'Morgan Stanley', 'BNP Paribas', 'Deloitte', 'PwC', 'EY', 'KPMG', 
-                'Standard Chartered', 'State Street', 'MSCI', 'Nomura', 'Citi', 'Barclays'].map((company, idx) => (
-                <div key={idx} className="company-badge-scroll">
-                  <span className="company-name-scroll">{company}</span>
-                </div>
-              ))}
-              {/* Duplicate */}
-              {['J.P. Morgan', 'Goldman Sachs', 'Morgan Stanley', 'BNP Paribas', 'Deloitte', 'PwC', 'EY', 'KPMG', 
-                'Standard Chartered', 'State Street', 'MSCI', 'Nomura', 'Citi', 'Barclays'].map((company, idx) => (
-                <div key={`dup1-${idx}`} className="company-badge-scroll">
-                  <span className="company-name-scroll">{company}</span>
-                </div>
-              ))}
-            </div>
+            ))}
           </div>
 
-          {/* Row 2 - Scroll Right to Left */}
-          <div className="scroll-container mb-3">
-            <div className="scroll-track scroll-rtl">
-              {['Amazon', 'Google', 'Microsoft', 'Flipkart', 'Accenture', 'Cognizant', 'TCS', 'Infosys', 
-                'Wipro', 'HCL', 'Tech Mahindra', 'Capgemini', 'IBM', 'Oracle'].map((company, idx) => (
-                <div key={idx} className="company-badge-scroll">
-                  <span className="company-name-scroll">{company}</span>
+          {coursesLoading && <div className="lp-state"><span className="edu-spinner" /></div>}
+          {!coursesLoading && visibleCourses.length === 0 && (
+            <div className="lp-state edu-muted">Programs in this field are being updated. See the full list instead.</div>
+          )}
+
+          <div className="lp-programs">
+            {visibleCourses.map((course, i) => (
+              <article key={course._id} className="lp-program">
+                <div className="lp-program__media">
+                  {thumbUrl(course.thumbnail) && <img src={thumbUrl(course.thumbnail)} alt="" loading="lazy" />}
+                  <span className="lp-program__num">{String(i + 1).padStart(2, '0')}</span>
                 </div>
-              ))}
-              {/* Duplicate */}
-              {['Amazon', 'Google', 'Microsoft', 'Flipkart', 'Accenture', 'Cognizant', 'TCS', 'Infosys', 
-                'Wipro', 'HCL', 'Tech Mahindra', 'Capgemini', 'IBM', 'Oracle'].map((company, idx) => (
-                <div key={`dup2-${idx}`} className="company-badge-scroll">
-                  <span className="company-name-scroll">{company}</span>
+                <div className="lp-program__body">
+                  <div className="lp-program__meta">
+                    <span>{course.duration || 'Self-paced'}</span>
+                    <span>{course.modules?.length || 0} {course.modules?.length === 1 ? 'module' : 'modules'}</span>
+                  </div>
+                  <h3 className="lp-program__title">{course.title}</h3>
+                  <p className="lp-program__desc">{course.description}</p>
+                  <div className="lp-program__foot">
+                    <span className="lp-program__price">
+                      <small>₹</small>{Number(course.price || 0).toLocaleString('en-IN')}
+                    </span>
+                    <button className="edu-btn edu-btn--sm" onClick={() => navigate(`/payment/${course._id}`)}>
+                      Enroll →
+                    </button>
+                  </div>
                 </div>
-              ))}
-            </div>
+              </article>
+            ))}
           </div>
 
-          {/* Row 3 - Scroll Left to Right */}
-          <div className="scroll-container">
-            <div className="scroll-track scroll-ltr">
-              {['HDFC Bank', 'ICICI Bank', 'Axis Bank', 'Kotak Mahindra', 'Yes Bank', 'IndusInd Bank', 
-                'American Express', 'Genpact', 'WNS', 'Concentrix', 'Teleperformance', 'HSBC', 'DBS', 'RBS'].map((company, idx) => (
-                <div key={idx} className="company-badge-scroll">
-                  <span className="company-name-scroll">{company}</span>
-                </div>
-              ))}
-              {/* Duplicate */}
-              {['HDFC Bank', 'ICICI Bank', 'Axis Bank', 'Kotak Mahindra', 'Yes Bank', 'IndusInd Bank', 
-                'American Express', 'Genpact', 'WNS', 'Concentrix', 'Teleperformance', 'HSBC', 'DBS', 'RBS'].map((company, idx) => (
-                <div key={`dup3-${idx}`} className="company-badge-scroll">
-                  <span className="company-name-scroll">{company}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Video Testimonial Section */}
-      <section className="video-testimonial-section py-5 bg-light">
-        <div className="container">
-          <h2 className="text-center mb-4">Hear From Our <span className="text-success">Success Stories</span></h2>
-          <p className="text-center text-muted mb-5">Real stories from our learners who transformed their careers</p>
-          <div className="row justify-content-center">
-            <div className="col-lg-8">
-              <div className="video-container shadow-lg rounded overflow-hidden">
-                <video 
-                  controls 
-                  poster="https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=800&h=450&fit=crop"
-                  className="w-100"
-                  style={{maxHeight: '500px', objectFit: 'cover'}}
-                >
-                  <source src={`${process.env.REACT_APP_API_URL?.replace('/api', '') || 'http://localhost:5000'}/public/Vinay_jain.mp4`} type="video/mp4" />
-                  Your browser does not support the video tag.
-                </video>
-              </div>
-              <div className="text-center mt-4">
-                <h5 className="mb-2">Vinay Jain - Success Story</h5>
-                <p className="text-muted">See how Imarticus helped transform careers</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Placement Highlights */}
-      <section id="placement-section" className="placement-section py-5 bg-success text-white">
-        <div className="container">
-          <h2 className="text-center mb-5 animate-slide-up">Placement highlights FY2025</h2>
-          <div className="row text-center">
-            <div className="col-md-3 mb-4">
-              <div className="stat-card animate-count-up">
-                <h1 className="display-4 fw-bold counter" data-target="7921">7,921</h1>
-                <p className="stat-description">Learners Placed</p>
-              </div>
-            </div>
-            <div className="col-md-3 mb-4">
-              <div className="stat-card animate-count-up" style={{animationDelay: '0.2s'}}>
-                <h1 className="display-4 fw-bold counter" data-target="4350">4,350+</h1>
-                <p className="stat-description">Unique Job Roles Explored</p>
-              </div>
-            </div>
-            <div className="col-md-3 mb-4">
-              <div className="stat-card animate-count-up" style={{animationDelay: '0.4s'}}>
-                <h1 className="display-4 fw-bold counter" data-target="31700">31,700+</h1>
-                <p className="stat-description">Interviews Conducted</p>
-              </div>
-            </div>
-            <div className="col-md-3 mb-4">
-              <div className="stat-card animate-count-up" style={{animationDelay: '0.6s'}}>
-                <h1 className="display-4 fw-bold counter" data-target="2215">2,215+</h1>
-                <p className="stat-description">Companies Hired Our Learners</p>
-              </div>
-            </div>
-          </div>
-          <div className="text-center mt-4">
-            <button className="btn btn-light btn-lg pulse-animation" onClick={() => alert('Placement report download feature coming soon!')}>
-              Download Placement Report →
+          <div className="lp-programs__all">
+            <button className="edu-link" onClick={() => navigate('/courses', { state: { interest: activeCategory } })}>
+              All {CATEGORIES.find((c) => c.key === activeCategory)?.label} programs →
             </button>
           </div>
         </div>
       </section>
 
-      {/* CTA Section */}
-      <section className="cta-section py-5 text-center">
-        <div className="container">
-          <h2 className="mb-4">Ready to Transform Your Career?</h2>
-          <button className="btn btn-success btn-lg px-5" onClick={handleApplyNow}>
-            Apply Now →
-          </button>
+      {/* Method */}
+      <section className="edu-section edu-section--ink" id="method">
+        <div className="edu-container">
+          <div className="lp-head lp-head--split">
+            <div>
+              <p className="edu-index"><span>02</span><span>The loop</span></p>
+              <h2 className="edu-h1">Four steps.<br /><em>Every week.</em></h2>
+            </div>
+            <p className="edu-lead">Nothing clever. The loop that works when you learn a trade: see it, try it, get corrected, try again.</p>
+          </div>
+
+          <ol className="lp-method">
+            {METHOD.map((m) => (
+              <li key={m.n} className="lp-method__row">
+                <span className="lp-method__n">{m.n}</span>
+                <h3 className="lp-method__title">{m.title}</h3>
+                <p className="lp-method__body">{m.body}</p>
+              </li>
+            ))}
+          </ol>
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="footer bg-dark text-white py-5">
-        <div className="container">
-          <div className="row">
-            <div className="col-md-3 mb-4">
-              <div className="footer-logo mb-3">
-                <img src={logo} alt="Imarticus Learning" style={{height: '50px', filter: 'brightness(0) invert(1)'}} />
-              </div>
-              <p className="text-muted">
-                India's leading professional education institute delivering job-ready, certification, and executive programs since 2012.
-              </p>
-              <div className="social-links mt-3">
-                <a href="https://www.facebook.com/imarticuslearning" target="_blank" rel="noopener noreferrer" className="text-white me-3">
-                  <i className="bi bi-facebook" style={{fontSize: '1.5rem'}}></i>
-                </a>
-                <a href="https://www.linkedin.com/school/imarticus-learning" target="_blank" rel="noopener noreferrer" className="text-white me-3">
-                  <i className="bi bi-linkedin" style={{fontSize: '1.5rem'}}></i>
-                </a>
-                <a href="https://twitter.com/imarticusindia" target="_blank" rel="noopener noreferrer" className="text-white me-3">
-                  <i className="bi bi-twitter-x" style={{fontSize: '1.5rem'}}></i>
-                </a>
-                <a href="https://www.instagram.com/imarticuslearning" target="_blank" rel="noopener noreferrer" className="text-white me-3">
-                  <i className="bi bi-instagram" style={{fontSize: '1.5rem'}}></i>
-                </a>
-                <a href="https://www.youtube.com/@ImarticusLearning" target="_blank" rel="noopener noreferrer" className="text-white">
-                  <i className="bi bi-youtube" style={{fontSize: '1.5rem'}}></i>
-                </a>
-              </div>
-              <div className="mt-4">
-                <h6 className="mb-2">Download our app</h6>
-                <div className="app-badges">
-                  <a href="#" className="d-block mb-2">
-                    <img src="https://developer.apple.com/app-store/marketing/guidelines/images/badge-download-on-the-app-store.svg" alt="App Store" style={{height: '40px'}} />
-                  </a>
-                  <a href="#" className="d-block">
-                    <img src="https://upload.wikimedia.org/wikipedia/commons/7/78/Google_Play_Store_badge_EN.svg" alt="Google Play" style={{height: '40px'}} />
-                  </a>
-                </div>
-              </div>
-            </div>
-            
-            <div className="col-md-2 mb-4">
-              <h6 className="mb-3 text-success">Support</h6>
-              <ul className="list-unstyled">
-                <li className="mb-2"><a href="#" className="text-muted text-decoration-none">About Us</a></li>
-                <li className="mb-2"><a href="#" className="text-muted text-decoration-none">Help And Support</a></li>
-                <li className="mb-2"><a href="#" className="text-muted text-decoration-none">Refer And Earn</a></li>
-                <li className="mb-2"><a href="#" className="text-muted text-decoration-none">Careers At Imarticus</a></li>
-              </ul>
-            </div>
-
-            <div className="col-md-2 mb-4">
-              <h6 className="mb-3 text-success">Industries</h6>
-              <ul className="list-unstyled">
-                <li className="mb-2"><a href="#" className="text-muted text-decoration-none">Finance</a></li>
-                <li className="mb-2"><a href="#" className="text-muted text-decoration-none">Analytics</a></li>
-                <li className="mb-2"><a href="#" className="text-muted text-decoration-none">Technology</a></li>
-                <li className="mb-2"><a href="#" className="text-muted text-decoration-none">Marketing</a></li>
-              </ul>
-            </div>
-
-            <div className="col-md-2 mb-4">
-              <h6 className="mb-3 text-success">Resources</h6>
-              <ul className="list-unstyled">
-                <li className="mb-2"><a href="#" className="text-muted text-decoration-none">Blogs</a></li>
-              </ul>
-            </div>
-
-            <div className="col-md-3 mb-4">
-              <h6 className="mb-3 text-success">Follow us on</h6>
-              <div className="mb-4">
-                <div className="d-flex align-items-center mb-2">
-                  <i className="bi bi-facebook text-white me-2"></i>
-                  <i className="bi bi-twitter-x text-white me-2"></i>
-                  <i className="bi bi-linkedin text-white me-2"></i>
-                  <i className="bi bi-instagram text-white me-2"></i>
-                  <i className="bi bi-youtube text-white"></i>
-                </div>
-              </div>
-              <h6 className="mb-3">Download our app</h6>
-              <div className="app-store-badges">
-                <img src="https://upload.wikimedia.org/wikipedia/commons/3/3c/Download_on_the_App_Store_Badge.svg" alt="App Store" style={{height: '35px'}} className="mb-2 d-block" />
-                <img src="https://upload.wikimedia.org/wikipedia/commons/7/78/Google_Play_Store_badge_EN.svg" alt="Google Play" style={{height: '35px'}} className="d-block" />
-              </div>
-            </div>
+      {/* Quiz */}
+      <section className="edu-section lp-quiz">
+        <div className="edu-container">
+          <div className="lp-head lp-head--center">
+            <p className="edu-index"><span>03</span><span>Not sure yet?</span></p>
+            <h2 className="edu-h1">What do you want<br />to <em>get good at?</em></h2>
           </div>
-          
-          <hr className="bg-secondary my-4" />
-          
-          <div className="row">
-            <div className="col-md-6 text-center text-md-start">
-              <p className="text-muted mb-0">
-                © 2025 Imarticus Learning. All rights reserved.
-              </p>
+
+          <div className="lp-quiz__options" role="radiogroup" aria-label="Field of interest">
+            {CATEGORIES.map((c) => (
+              <button
+                key={c.key}
+                role="radio"
+                aria-checked={selectedInterest === c.key}
+                className={`lp-quiz__option${selectedInterest === c.key ? ' is-selected' : ''}`}
+                onClick={() => { setSelectedInterest(c.key); setQuizError(false); }}
+              >
+                {c.label}
+              </button>
+            ))}
+          </div>
+
+          <div className="lp-quiz__foot">
+            {quizError && <p className="lp-quiz__error">Pick one to continue.</p>}
+            <button className="edu-btn edu-btn--lg edu-btn--accent" onClick={handleQuizNext}>
+              Show my programs →
+            </button>
+          </div>
+        </div>
+      </section>
+
+      {/* Outcomes */}
+      <section className="edu-section edu-section--ink" id="outcomes">
+        <div className="edu-container">
+          <div className="lp-head">
+            <p className="edu-index"><span>04</span><span>Outcomes</span></p>
+            <h2 className="edu-h1">No star ratings.<br /><em>Just people.</em></h2>
+          </div>
+
+          <div className="lp-voices">
+            {VOICES.map((v) => (
+              <figure key={v.name} className="lp-voice">
+                <span className="lp-voice__mark" aria-hidden="true">“</span>
+                <blockquote>{v.quote}</blockquote>
+                <figcaption>
+                  <strong>{v.name}</strong>
+                  <span className="edu-label">{v.meta}</span>
+                </figcaption>
+              </figure>
+            ))}
+          </div>
+
+          <div className="lp-film">
+            <div className="lp-film__frame">
+              <video
+                controls
+                preload="none"
+                poster="https://images.unsplash.com/photo-1522202176988-66273c2fd55f?w=1200&h=675&fit=crop"
+              >
+                <source src={`${SERVER_URL}/public/Vinay_jain.mp4`} type="video/mp4" />
+                Your browser does not support the video tag.
+              </video>
             </div>
-            <div className="col-md-6 text-center text-md-end">
-              <a href="#" className="text-muted text-decoration-none me-3">Privacy Policy</a>
-              <a href="#" className="text-muted text-decoration-none">Terms & Conditions</a>
+            <div className="lp-film__caption">
+              <span className="edu-label edu-label--accent">Film · 02:40</span>
+              <span>One learner's six weeks, start to finish.</span>
             </div>
           </div>
         </div>
-      </footer>
+      </section>
+
+      {/* FAQ */}
+      <section className="edu-section" id="faq">
+        <div className="edu-container lp-faq">
+          <div>
+            <p className="edu-index"><span>05</span><span>Questions</span></p>
+            <h2 className="edu-h1 lp-faq__title">Fair<br /><em>questions.</em></h2>
+          </div>
+          <div className="lp-faq__list">
+            {FAQ.map((item, i) => (
+              <div key={item.q} className={`lp-faq__item${openFaq === i ? ' is-open' : ''}`}>
+                <button
+                  className="lp-faq__q"
+                  aria-expanded={openFaq === i}
+                  onClick={() => setOpenFaq(openFaq === i ? -1 : i)}
+                >
+                  <span>{item.q}</span>
+                  <span className="lp-faq__sign" aria-hidden="true">{openFaq === i ? '−' : '+'}</span>
+                </button>
+                {openFaq === i && <p className="lp-faq__a">{item.a}</p>}
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      <SiteFooter />
     </div>
   );
 };

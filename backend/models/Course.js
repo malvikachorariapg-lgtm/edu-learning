@@ -55,7 +55,7 @@ const courseSchema = new mongoose.Schema({
   },
   instructor: {
     type: String,
-    default: 'Imarticus Learning'
+    default: 'Edu Learning'
   },
   duration: {
     type: String,
@@ -74,6 +74,25 @@ const courseSchema = new mongoose.Schema({
     enum: ['finance', 'technology', 'analytics', 'marketing', 'management'],
     default: 'technology'
   },
+  level: {
+    type: String,
+    enum: ['Beginner', 'Intermediate', 'Advanced', 'All levels'],
+    default: 'All levels'
+  },
+  language: {
+    type: String,
+    default: 'English'
+  },
+  highlights: [{ type: String }],
+  skills: [{ type: String }],
+  ratingAvg: {
+    type: Number,
+    default: 0
+  },
+  ratingCount: {
+    type: Number,
+    default: 0
+  },
   modules: [moduleSchema],
   isActive: {
     type: Boolean,
@@ -82,5 +101,9 @@ const courseSchema = new mongoose.Schema({
 }, {
   timestamps: true
 });
+
+// Indexes for list/filter queries
+courseSchema.index({ isActive: 1, createdAt: -1 });
+courseSchema.index({ category: 1 });
 
 module.exports = mongoose.model('Course', courseSchema);

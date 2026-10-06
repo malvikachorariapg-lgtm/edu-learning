@@ -1,0 +1,23 @@
+# Local observability stack: `docker compose -f observability/docker-compose.yml up -d`
+# Jaeger UI (traces): http://localhost:16686   OTLP/HTTP ingest: http://localhost:4318
+# Logs: observability/logs/edu-logs.jsonl  (tail -f, or `docker logs -f edu-otel-collector`)
+services:
+  jaeger:
+    image: jaegertracing/all-in-one:1.62.0
+    container_name: edu-jaeger
+    ports:
+      - "16686:16686"
+    restart: unless-stopped
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.111.0
+    container_name: edu-otel-collector
+    command: ["--config=/etc/otelcol/config.yaml"]
+    volumes:
+      - ./otel-collector.yaml:/etc/otelcol/config.yaml:ro
+      - ./logs:/var/log/otel
+    ports:
+      - "4318:4318"
+    depends_on:
+      - jaeger
+    restart: unless-stopped

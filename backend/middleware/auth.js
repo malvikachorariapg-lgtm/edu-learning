@@ -1,7 +1,14 @@
 // JWT Authentication Middleware
 const jwt = require('jsonwebtoken');
 
-const JWT_SECRET = process.env.JWT_SECRET || 'imarticus-lms-secret-key-2024';
+// JWT secret is mandatory in production - fail fast instead of signing with a guessable default
+if (!process.env.JWT_SECRET && process.env.NODE_ENV === 'production') {
+  throw new Error('JWT_SECRET environment variable is required in production');
+}
+if (!process.env.JWT_SECRET) {
+  console.warn('⚠️  JWT_SECRET not set - using insecure development secret');
+}
+const JWT_SECRET = process.env.JWT_SECRET || 'dev-only-insecure-jwt-secret';
 
 // Generate JWT Token
 const generateToken = (user) => {
@@ -13,7 +20,7 @@ const generateToken = (user) => {
       name: user.name
     },
     JWT_SECRET,
-    { expiresIn: '7d' }
+    { expiresIn: '7d', algorithm: 'HS256' }
   );
 };
 
@@ -33,7 +40,7 @@ const verifyToken = (req, res, next) => {
     const token = authHeader.split(' ')[1];
     
     // Verify token
-    const decoded = jwt.verify(token, JWT_SECRET);
+    const decoded = jwt.verify(token, JWT_SECRET, { algorithms: ['HS256'] });
     
     // Add user info to request
     req.user = decoded;
@@ -79,8 +86,20 @@ const isAdmin = (req, res, next) => {
   }
 };
 
+// Decode a Bearer token without rejecting the request (used for per-user rate limit keys)
+const getUserFromRequest = (req) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) return null;
+  try {
+    return jwt.verify(authHeader.split(' ')[1], JWT_SECRET, { algorithms: ['HS256'] });
+  } catch (e) {
+    return null;
+  }
+};
+
 module.exports = {
   generateToken,
+  getUserFromRequest,
   verifyToken,
   isAdmin
 };

@@ -20,13 +20,13 @@ const courses = [
         lessons: [
           {
             title: 'HTML Basics',
-            videoUrl: 'https://drive.google.com/file/d/1NGvLKYjur_qLjzXLRGtEqeDS56oB2woI/view',
+            videoUrl: 'https://www.youtube.com/watch?v=bPWmcPGdMn4',
             duration: '15:30',
             order: 1
           },
           {
             title: 'CSS Styling',
-            videoUrl: 'https://drive.google.com/file/d/1NGvLKYjur_qLjzXLRGtEqeDS56oB2woI/view',
+            videoUrl: 'https://www.youtube.com/watch?v=hBUQ8x1WlAY',
             duration: '20:45',
             order: 2
           }
@@ -49,7 +49,7 @@ const courses = [
         lessons: [
           {
             title: 'Python Basics',
-            videoUrl: 'https://drive.google.com/file/d/1NGvLKYjur_qLjzXLRGtEqeDS56oB2woI/view',
+            videoUrl: 'https://www.youtube.com/watch?v=wkA_fK_-TlM',
             duration: '25:00',
             order: 1
           }
@@ -72,7 +72,7 @@ const courses = [
         lessons: [
           {
             title: 'Introduction to AWS',
-            videoUrl: 'https://drive.google.com/file/d/1NGvLKYjur_qLjzXLRGtEqeDS56oB2woI/view',
+            videoUrl: 'https://www.youtube.com/watch?v=MItFKhLKA18',
             duration: '18:30',
             order: 1
           }
@@ -97,7 +97,7 @@ const courses = [
         lessons: [
           {
             title: 'Introduction to IB',
-            videoUrl: 'https://drive.google.com/file/d/1NGvLKYjur_qLjzXLRGtEqeDS56oB2woI/view',
+            videoUrl: 'https://www.youtube.com/watch?v=VkjUvAmHMiE',
             duration: '30:00',
             order: 1
           }
@@ -120,7 +120,7 @@ const courses = [
         lessons: [
           {
             title: 'Excel for Finance',
-            videoUrl: 'https://drive.google.com/file/d/1NGvLKYjur_qLjzXLRGtEqeDS56oB2woI/view',
+            videoUrl: 'https://www.youtube.com/watch?v=AEWfYNZsPbg',
             duration: '28:00',
             order: 1
           }
@@ -143,7 +143,7 @@ const courses = [
         lessons: [
           {
             title: 'Types of Risk',
-            videoUrl: 'https://drive.google.com/file/d/1NGvLKYjur_qLjzXLRGtEqeDS56oB2woI/view',
+            videoUrl: 'https://www.youtube.com/watch?v=6OdXHObIJgo',
             duration: '22:00',
             order: 1
           }
@@ -168,7 +168,7 @@ const courses = [
         lessons: [
           {
             title: 'Getting Started with Power BI',
-            videoUrl: 'https://drive.google.com/file/d/1NGvLKYjur_qLjzXLRGtEqeDS56oB2woI/view',
+            videoUrl: 'https://www.youtube.com/watch?v=OEd2WPYuO-I',
             duration: '20:00',
             order: 1
           }
@@ -191,7 +191,7 @@ const courses = [
         lessons: [
           {
             title: 'Introduction to SQL',
-            videoUrl: 'https://drive.google.com/file/d/1NGvLKYjur_qLjzXLRGtEqeDS56oB2woI/view',
+            videoUrl: 'https://www.youtube.com/watch?v=bPWmcPGdMn4',
             duration: '25:00',
             order: 1
           }
@@ -214,7 +214,7 @@ const courses = [
         lessons: [
           {
             title: 'What is Machine Learning',
-            videoUrl: 'https://drive.google.com/file/d/1NGvLKYjur_qLjzXLRGtEqeDS56oB2woI/view',
+            videoUrl: 'https://www.youtube.com/watch?v=hBUQ8x1WlAY',
             duration: '30:00',
             order: 1
           }
@@ -239,7 +239,7 @@ const courses = [
         lessons: [
           {
             title: 'Introduction to Digital Marketing',
-            videoUrl: 'https://drive.google.com/file/d/1NGvLKYjur_qLjzXLRGtEqeDS56oB2woI/view',
+            videoUrl: 'https://www.youtube.com/watch?v=wkA_fK_-TlM',
             duration: '22:00',
             order: 1
           }
@@ -262,7 +262,7 @@ const courses = [
         lessons: [
           {
             title: 'What is Content Marketing',
-            videoUrl: 'https://drive.google.com/file/d/1NGvLKYjur_qLjzXLRGtEqeDS56oB2woI/view',
+            videoUrl: 'https://www.youtube.com/watch?v=MItFKhLKA18',
             duration: '18:00',
             order: 1
           }
@@ -285,7 +285,7 @@ const courses = [
         lessons: [
           {
             title: 'Social Media Platforms Overview',
-            videoUrl: 'https://drive.google.com/file/d/1NGvLKYjur_qLjzXLRGtEqeDS56oB2woI/view',
+            videoUrl: 'https://www.youtube.com/watch?v=VkjUvAmHMiE',
             duration: '20:00',
             order: 1
           }
@@ -310,7 +310,7 @@ const courses = [
         lessons: [
           {
             title: 'Introduction to PM',
-            videoUrl: 'https://drive.google.com/file/d/1NGvLKYjur_qLjzXLRGtEqeDS56oB2woI/view',
+            videoUrl: 'https://www.youtube.com/watch?v=AEWfYNZsPbg',
             duration: '25:00',
             order: 1
           }
@@ -333,7 +333,7 @@ const courses = [
         lessons: [
           {
             title: 'What Makes a Great Leader',
-            videoUrl: 'https://drive.google.com/file/d/1NGvLKYjur_qLjzXLRGtEqeDS56oB2woI/view',
+            videoUrl: 'https://www.youtube.com/watch?v=6OdXHObIJgo',
             duration: '28:00',
             order: 1
           }
@@ -356,7 +356,7 @@ const courses = [
         lessons: [
           {
             title: 'Introduction to Operations',
-            videoUrl: 'https://drive.google.com/file/d/1NGvLKYjur_qLjzXLRGtEqeDS56oB2woI/view',
+            videoUrl: 'https://www.youtube.com/watch?v=OEd2WPYuO-I',
             duration: '24:00',
             order: 1
           }

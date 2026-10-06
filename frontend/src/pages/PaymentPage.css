@@ -1,197 +1,354 @@
-.payment-page {
-  min-height: 100vh;
-  background: #f5f7fa;
-  padding: 3rem 0;
-}
+/* ==========================================================================
+   Payment — course summary + a raised NeoPOP receipt
+   ========================================================================== */
 
-.payment-card {
-  background-color: white;
-  border-radius: 15px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-  overflow: hidden;
-  max-width: 1000px;
-  margin: 0 auto;
-}
+.pay-page { background: var(--paper); min-height: 100vh; overflow-x: clip; }
 
-.course-info-section {
-  background: #ffffff;
-  border-right: 1px solid #e9ecef;
-  color: #333;
-  padding: 2.5rem 2rem;
-}
+.pay-wrap { padding-top: clamp(24px, 3vw, 40px); padding-bottom: clamp(80px, 11vw, 144px); }
 
-.course-info-section h2 {
-  color: #0d6157;
-  font-weight: 600;
-  margin-bottom: 1.5rem;
-}
-
-.course-image {
-  width: 100%;
-  height: 180px;
-  object-fit: cover;
-  border-radius: 10px;
-  margin-bottom: 1.5rem;
-}
-
-.course-features {
-  margin-top: 1.5rem;
-}
-
-.feature {
+/* ---------- Crumbs / steps ---------- */
+.pay-crumbs {
   display: flex;
+  justify-content: space-between;
   align-items: center;
-  gap: 1rem;
-  padding: 0.75rem 0;
-  border-bottom: 1px solid #e9ecef;
-  color: #555;
-  font-size: 0.95rem;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding-bottom: 20px;
+  margin-bottom: clamp(40px, 6vw, 80px);
+  border-bottom: 1px solid var(--line-soft);
 }
-
-.feature:last-child {
-  border-bottom: none;
-}
-
-.feature .icon {
-  font-size: 1.5rem;
-}
-
-.price-section {
-  background: linear-gradient(135deg, #0d6157 0%, #0a4d44 100%);
-  color: white;
-  padding: 1.5rem;
-  border-radius: 10px;
-  text-align: center;
-  margin-top: 1.5rem;
-}
-
-.price-label {
-  font-size: 0.9rem;
-  opacity: 0.9;
-  margin-bottom: 0.5rem;
-}
-
-.price {
-  font-size: 3rem;
+.pay-back {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  font-size: 0.72rem;
   font-weight: 700;
-  margin: 0.5rem 0;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+}
+.pay-steps {
+  list-style: none;
+  display: flex;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+.pay-steps li {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 0 16px;
+  border: 1px solid var(--line);
+  color: var(--muted);
+}
+.pay-steps li span { color: inherit; opacity: 0.6; }
+.pay-steps li.is-done { color: var(--ink-2); }
+.pay-steps li.is-done span { color: var(--accent); opacity: 1; }
+.pay-steps li.is-current { background: var(--ink); border-color: var(--ink); color: var(--accent-ink); }
+.pay-steps li.is-current span { opacity: 1; }
+
+/* ---------- Grid ---------- */
+.pay-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(360px, 460px);
+  gap: clamp(40px, 7vw, 112px);
+  align-items: start;
 }
 
-.price-note {
-  font-size: 0.85rem;
-  opacity: 0.8;
+/* ---------- Course ---------- */
+.pay-course__head { margin-top: 24px; }
+.pay-course__title {
+  margin: 20px 0 24px;
+  font-size: clamp(2.6rem, 5.4vw, 5rem);
+  font-weight: 900;
+  line-height: 0.95;
+  overflow-wrap: break-word;
+}
+.pay-course__desc { margin: 0; max-width: 52ch; font-size: 1.05rem; color: var(--ink-2); }
+
+.pay-course__figure {
+  margin: clamp(32px, 4vw, 48px) 0 0;
+  border: 1px solid var(--line);
+  aspect-ratio: 16 / 7;
+  overflow: hidden;
+  background: var(--paper-3);
+}
+.pay-course__figure img { width: 100%; height: 100%; object-fit: cover; }
+.pay-course__placeholder {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-size: clamp(5rem, 12vw, 9rem);
+  color: var(--accent);
+  background: var(--paper-2);
 }
 
-.payment-form-section {
-  padding: 2.5rem 2rem;
-  background: #ffffff;
+.pay-facts {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  margin: 0;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-top: 0;
+}
+.pay-facts > div { padding: 20px 22px; min-width: 0; }
+.pay-facts > div + div { border-left: 1px solid var(--line-soft); }
+.pay-facts dt {
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+.pay-facts dd {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 800;
+  font-size: 1.15rem;
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
 }
 
-.payment-form-section h2 {
-  color: #0d6157;
-  font-weight: 600;
-  margin-bottom: 1.5rem;
-}
-
-.form-label {
-  font-weight: 500;
-  color: #555;
-  margin-bottom: 0.5rem;
-}
-
-.form-control {
-  border: 2px solid #e0e0e0;
-  border-radius: 10px;
-  padding: 0.75rem 1rem;
+.pay-includes__label { margin: clamp(40px, 5vw, 56px) 0 8px; }
+.pay-includes { list-style: none; margin: 0; padding: 0; }
+.pay-includes li {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr);
+  gap: 14px;
+  align-items: baseline;
+  padding: 16px 0;
+  border-bottom: 1px solid var(--line-soft);
   font-size: 1rem;
-  transition: all 0.3s ease;
+  font-weight: 500;
+}
+.pay-includes__mark {
+  width: 10px;
+  height: 10px;
+  background: var(--accent);
+  transform: translateY(-1px);
 }
 
-.form-control:focus {
-  border-color: #0d6157;
-  box-shadow: 0 0 0 0.2rem rgba(13, 97, 87, 0.25);
-}
+/* ---------- Receipt ---------- */
+.pay-receipt-col { position: sticky; top: calc(var(--header-h) + 24px); }
 
-.payment-summary {
-  background-color: #f8f9fa;
-  padding: 1.5rem;
-  border-radius: 10px;
-}
+.pay-receipt { padding: clamp(24px, 2.6vw, 34px); }
 
-.payment-summary hr {
-  margin: 1rem 0;
+.pay-receipt__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  padding-bottom: 22px;
+  border-bottom: 1px solid var(--line);
 }
-
-.btn-success {
-  background-color: #0d6157;
-  border: none;
-  border-radius: 10px;
-  padding: 1rem;
+.pay-receipt__brand {
+  margin: 0 0 6px;
+  font-family: var(--font-display);
+  font-weight: 900;
+  font-size: 1.35rem;
+  letter-spacing: -0.02em;
+  text-transform: uppercase;
+  line-height: 1;
+}
+.pay-receipt__no { text-align: right; }
+.pay-receipt__meta {
+  margin: 0;
+  font-size: 0.64rem;
   font-weight: 600;
-  font-size: 1.1rem;
-  transition: all 0.3s ease;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--muted);
+  line-height: 1.7;
 }
 
-.btn-success:hover {
-  background-color: #0a4d44;
-  transform: translateY(-2px);
-  box-shadow: 0 5px 15px rgba(13, 97, 87, 0.3);
+.pay-receipt__section { padding: 24px 0 8px; border-bottom: 1px solid var(--line-soft); }
+.pay-receipt__label {
+  margin: 0 0 16px;
+  font-size: 0.66rem;
+  font-weight: 800;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+.pay-receipt__signed { margin: -8px 0 16px; font-size: 0.85rem; color: var(--muted); overflow-wrap: anywhere; }
+.pay-receipt .edu-field { margin-bottom: 18px; }
+.pay-receipt .edu-input { background: var(--paper); }
+.pay-receipt .edu-input:focus { background: var(--input-focus); }
+
+.pay-lines { list-style: none; margin: 0 0 16px; padding: 0; font-size: 0.9rem; }
+.pay-lines li { display: flex; align-items: baseline; gap: 10px; padding: 7px 0; }
+.pay-lines__name { min-width: 0; max-width: 70%; color: var(--ink-2); }
+.pay-lines__dots { flex: 1; min-width: 16px; border-bottom: 1px dashed var(--line); transform: translateY(-4px); }
+.pay-lines li > span:last-child { white-space: nowrap; font-weight: 700; }
+
+/* Total: the one stark white block on the page */
+.pay-total {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 6px 16px;
+  margin-top: 24px;
+  padding: 22px 22px 20px;
+  background: var(--ink);
+  color: var(--ink-inverse);
+}
+.pay-total .pay-receipt__label { margin: 0; color: var(--ink-inverse); grid-column: 1; }
+.pay-total__amount {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  font-family: var(--font-display);
+  font-weight: 900;
+  font-size: clamp(2.6rem, 4.4vw, 3.5rem);
+  line-height: 0.9;
+  letter-spacing: -0.045em;
+  white-space: nowrap;
+}
+.pay-total__note { grid-column: 1; font-size: 0.8rem; color: color-mix(in srgb, var(--ink-inverse) 60%, transparent); max-width: 22ch; line-height: 1.4; }
+
+.pay-alert { margin-top: 20px; }
+
+.pay-submit { margin-top: 24px; }
+.pay-dot {
+  width: 12px;
+  height: 12px;
+  border: 2px solid color-mix(in srgb, var(--accent-ink) 30%, transparent);
+  border-top-color: var(--accent-ink);
+  border-radius: 50%;
+  animation: edu-spin 0.8s linear infinite;
 }
 
-.btn-success:disabled {
-  background-color: #6c757d;
-  cursor: not-allowed;
-  transform: none;
+.pay-receipt__foot { margin-top: 22px; display: flex; flex-direction: column; gap: 12px; }
+.pay-receipt__foot p { margin: 0; font-size: 0.82rem; color: var(--muted); line-height: 1.55; }
+.pay-receipt__test {
+  display: inline-block;
+  margin-right: 8px;
+  padding: 2px 8px;
+  background: var(--ochre-soft);
+  color: var(--ochre);
+  font-size: 0.6rem;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  vertical-align: 1px;
 }
 
-.payment-note {
-  padding: 1rem;
-  background-color: #f8f9fa;
-  border-radius: 8px;
+/* ---------- Missing ---------- */
+.pay-missing { padding: clamp(64px, 10vw, 120px) var(--gutter); }
+.pay-missing .edu-empty { display: flex; flex-direction: column; align-items: center; gap: 16px; }
+.pay-missing .edu-empty p { margin: 0; }
+.pay-missing .edu-h2 { text-transform: uppercase; font-weight: 900; }
+.pay-missing .edu-btn { margin-top: 12px; }
+
+/* ---------- Responsive ---------- */
+@media (max-width: 960px) {
+  .pay-grid { grid-template-columns: minmax(0, 1fr); }
+  .pay-receipt-col { position: static; max-width: 560px; width: 100%; }
 }
 
-.back-link .btn-link {
-  color: #666;
-  text-decoration: none;
-  transition: color 0.3s ease;
+@media (max-width: 640px) {
+  .pay-steps { display: none; }
+  .pay-crumbs { padding-bottom: 8px; }
+  .pay-course__title { font-size: clamp(1.9rem, 9vw, 3.25rem); }
+  .pay-facts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .pay-facts > div { padding: 16px 18px; }
+  .pay-facts > div:nth-child(3) { border-left: 0; }
+  .pay-facts > div:nth-child(n + 3) { border-top: 1px solid var(--line-soft); }
+  .pay-course__figure { aspect-ratio: 16 / 9; }
+  .pay-total { grid-template-columns: minmax(0, 1fr); }
+  .pay-total__amount { grid-column: 1; grid-row: auto; margin: 6px 0 4px; }
+  .pay-total__note { max-width: none; }
 }
 
-.back-link .btn-link:hover {
-  color: #0d6157;
+@media (max-width: 380px) {
+  .pay-receipt { padding: 22px 18px; }
+  .pay-receipt__head { flex-direction: column; gap: 8px; }
+  .pay-receipt__no { text-align: left; }
+  .pay-lines { font-size: 0.84rem; }
 }
+.pay-receipt__hint { margin: 6px 0 14px; font-size: 0.85rem; color: var(--muted); line-height: 1.45; }
 
-/* Responsive Design */
-@media (max-width: 768px) {
-  .payment-page {
-    padding: 2rem 0;
-  }
+.pay-enrolled { margin-top: 24px; display: flex; flex-direction: column; gap: 14px; }
+.pay-enrolled p { margin: 0; padding: 12px 14px; background: var(--forest-soft); color: var(--forest-text); font-size: 0.9rem; }
+.pay-enrolled strong { color: var(--forest-text); }
 
-  .course-info-section,
-  .payment-form-section {
-    padding: 2rem 1.5rem;
-  }
+/* ---------- Coupon ---------- */
+.pay-lines__discount .pay-lines__name,
+.pay-lines__discount > span:last-child { color: var(--forest); }
 
-  .price {
-    font-size: 2.5rem;
-  }
-
-  .feature {
-    font-size: 0.9rem;
-  }
+.pay-coupon { padding: 18px 0 0; }
+.pay-coupon__toggle,
+.pay-coupon__cancel,
+.pay-coupon__remove {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  padding: 0;
+  background: none;
+  border: 0;
+  font-family: var(--font-body);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--ink-2);
+  cursor: pointer;
 }
+.pay-coupon__toggle span { color: var(--accent); font-size: 1rem; }
+.pay-coupon__toggle:hover, .pay-coupon__cancel:hover { color: var(--accent); }
 
-@media (max-width: 576px) {
-  .payment-card {
-    border-radius: 10px;
-    margin: 0 1rem;
-  }
-
-  .course-info-section,
-  .payment-form-section {
-    padding: 1.5rem 1rem;
-  }
-
-  .price {
-    font-size: 2rem;
-  }
+.pay-coupon__form .pay-receipt__label { display: block; margin-bottom: 10px; }
+.pay-coupon__row { display: flex; gap: 10px; align-items: stretch; }
+.pay-coupon__input {
+  flex: 1;
+  min-width: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  font-weight: 700;
 }
+.pay-coupon__input::placeholder { text-transform: none; letter-spacing: 0; font-weight: 400; }
+.pay-coupon__apply { flex: none; min-height: 52px; margin: 0 4px 4px 0; }
+.pay-coupon__cancel { color: var(--muted); }
+
+.pay-coupon__applied {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  padding: 10px 12px;
+  border: 1px dashed var(--accent);
+  background: var(--accent-soft);
+}
+.pay-coupon__chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-family: var(--font-display);
+  font-weight: 900;
+  font-size: 0.8rem;
+  letter-spacing: 0.1em;
+}
+.pay-coupon__tick {
+  width: 10px;
+  height: 6px;
+  border-left: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  transform: rotate(-45deg) translateY(-2px);
+}
+.pay-coupon__desc { flex: 1 1 140px; min-width: 0; font-size: 0.82rem; color: var(--ink-2); line-height: 1.4; }
+.pay-coupon__remove { color: var(--danger); min-height: 36px; }
+.pay-coupon__remove:hover { text-decoration: underline; }

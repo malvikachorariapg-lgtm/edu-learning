@@ -19,21 +19,21 @@ const sampleCourse = {
       lessons: [
         {
           title: 'What is Machine Learning?',
-          videoUrl: 'https://drive.google.com/file/d/1NGvLKYjur_qLjzXLRGtEqeDS56oB2woI/view?usp=sharing',
+          videoUrl: 'https://www.youtube.com/watch?v=bPWmcPGdMn4',
           description: 'Introduction to Machine Learning concepts and overview',
           duration: '15:30',
           order: 1
         },
         {
           title: 'Types of Machine Learning',
-          videoUrl: 'https://drive.google.com/file/d/1NGvLKYjur_qLjzXLRGtEqeDS56oB2woI/view?usp=sharing',
+          videoUrl: 'https://www.youtube.com/watch?v=hBUQ8x1WlAY',
           description: 'Understanding Supervised, Unsupervised, and Reinforcement Learning',
           duration: '20:45',
           order: 2
         },
         {
           title: 'ML Applications in Real World',
-          videoUrl: 'https://drive.google.com/file/d/1NGvLKYjur_qLjzXLRGtEqeDS56oB2woI/view?usp=sharing',
+          videoUrl: 'https://www.youtube.com/watch?v=wkA_fK_-TlM',
           description: 'Exploring practical applications of Machine Learning',
           duration: '18:20',
           order: 3
@@ -47,21 +47,21 @@ const sampleCourse = {
       lessons: [
         {
           title: 'Data Preprocessing',
-          videoUrl: 'https://drive.google.com/file/d/1NGvLKYjur_qLjzXLRGtEqeDS56oB2woI/view?usp=sharing',
+          videoUrl: 'https://www.youtube.com/watch?v=MItFKhLKA18',
           description: 'Learn how to clean and prepare data for ML models',
           duration: '25:15',
           order: 1
         },
         {
           title: 'Feature Engineering',
-          videoUrl: 'https://drive.google.com/file/d/1NGvLKYjur_qLjzXLRGtEqeDS56oB2woI/view?usp=sharing',
+          videoUrl: 'https://www.youtube.com/watch?v=VkjUvAmHMiE',
           description: 'Creating meaningful features from raw data',
           duration: '22:30',
           order: 2
         },
         {
           title: 'Model Evaluation Metrics',
-          videoUrl: 'https://drive.google.com/file/d/1NGvLKYjur_qLjzXLRGtEqeDS56oB2woI/view?usp=sharing',
+          videoUrl: 'https://www.youtube.com/watch?v=AEWfYNZsPbg',
           description: 'Understanding accuracy, precision, recall, and F1-score',
           duration: '19:40',
           order: 3
@@ -75,21 +75,21 @@ const sampleCourse = {
       lessons: [
         {
           title: 'Linear Regression Fundamentals',
-          videoUrl: 'https://drive.google.com/file/d/1NGvLKYjur_qLjzXLRGtEqeDS56oB2woI/view?usp=sharing',
+          videoUrl: 'https://www.youtube.com/watch?v=6OdXHObIJgo',
           description: 'Introduction to linear regression and its applications',
           duration: '28:50',
           order: 1
         },
         {
           title: 'Polynomial Regression',
-          videoUrl: 'https://drive.google.com/file/d/1NGvLKYjur_qLjzXLRGtEqeDS56oB2woI/view?usp=sharing',
+          videoUrl: 'https://www.youtube.com/watch?v=OEd2WPYuO-I',
           description: 'Extending linear regression with polynomial features',
           duration: '26:15',
           order: 2
         },
         {
           title: 'Logistic Regression for Classification',
-          videoUrl: 'https://drive.google.com/file/d/1NGvLKYjur_qLjzXLRGtEqeDS56oB2woI/view?usp=sharing',
+          videoUrl: 'https://www.youtube.com/watch?v=bPWmcPGdMn4',
           description: 'Using logistic regression for binary classification problems',
           duration: '30:20',
           order: 3
@@ -103,21 +103,21 @@ const sampleCourse = {
       lessons: [
         {
           title: 'Introduction to Neural Networks',
-          videoUrl: 'https://drive.google.com/file/d/1NGvLKYjur_qLjzXLRGtEqeDS56oB2woI/view?usp=sharing',
+          videoUrl: 'https://www.youtube.com/watch?v=hBUQ8x1WlAY',
           description: 'Understanding artificial neurons and network architecture',
           duration: '32:45',
           order: 1
         },
         {
           title: 'Backpropagation Algorithm',
-          videoUrl: 'https://drive.google.com/file/d/1NGvLKYjur_qLjzXLRGtEqeDS56oB2woI/view?usp=sharing',
+          videoUrl: 'https://www.youtube.com/watch?v=wkA_fK_-TlM',
           description: 'How neural networks learn through backpropagation',
           duration: '35:10',
           order: 2
         },
         {
           title: 'Deep Learning Frameworks',
-          videoUrl: 'https://drive.google.com/file/d/1NGvLKYjur_qLjzXLRGtEqeDS56oB2woI/view?usp=sharing',
+          videoUrl: 'https://www.youtube.com/watch?v=MItFKhLKA18',
           description: 'Overview of TensorFlow, PyTorch, and Keras',
           duration: '27:30',
           order: 3
@@ -131,21 +131,21 @@ const sampleCourse = {
       lessons: [
         {
           title: 'Computer Vision with CNNs',
-          videoUrl: 'https://drive.google.com/file/d/1NGvLKYjur_qLjzXLRGtEqeDS56oB2woI/view?usp=sharing',
+          videoUrl: 'https://www.youtube.com/watch?v=VkjUvAmHMiE',
           description: 'Convolutional Neural Networks for image recognition',
           duration: '40:15',
           order: 1
         },
         {
           title: 'Natural Language Processing',
-          videoUrl: 'https://drive.google.com/file/d/1NGvLKYjur_qLjzXLRGtEqeDS56oB2woI/view?usp=sharing',
+          videoUrl: 'https://www.youtube.com/watch?v=AEWfYNZsPbg',
           description: 'Using deep learning for text analysis and generation',
           duration: '38:50',
           order: 2
         },
         {
           title: 'Transfer Learning and Fine-tuning',
-          videoUrl: 'https://drive.google.com/file/d/1NGvLKYjur_qLjzXLRGtEqeDS56oB2woI/view?usp=sharing',
+          videoUrl: 'https://www.youtube.com/watch?v=6OdXHObIJgo',
           description: 'Leveraging pre-trained models for your applications',
           duration: '33:25',
           order: 3

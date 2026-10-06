@@ -1,236 +1,300 @@
-import React, { useState } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
+import React, { useEffect, useState } from 'react';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { login, register } from '../services/api';
+import { toast } from '../components/Toaster';
+import Logo from '../components/Logo';
+import ThemeToggle from '../components/ThemeToggle';
+import { BRAND } from '../brand';
 import './AuthPage.css';
-import logo from '../assests/logo.svg';
+
+// After this many failed logins in a row on this device, the form cools down
+const MAX_FAILS = 5;
+const COOLDOWN_SECONDS = 30;
+
+const passwordChecks = (pw) => ({
+  length: pw.length >= 8,
+  letter: /[A-Za-z]/.test(pw),
+  number: /\d/.test(pw),
+  extra: pw.length >= 12 || /[^A-Za-z0-9]/.test(pw)
+});
+const STRENGTH_LABELS = ['Too weak', 'Weak', 'Okay', 'Strong', 'Very strong'];
 
 const AuthPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [isLogin, setIsLogin] = useState(true);
-  const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    password: ''
-  });
+  const [formData, setFormData] = useState({ name: '', email: '', password: '' });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [fails, setFails] = useState(0);
+  const [cooldown, setCooldown] = useState(0);
+
+  const checks = passwordChecks(formData.password);
+  const score = Object.values(checks).filter(Boolean).length;
+  const passwordOk = checks.length && checks.letter && checks.number;
+
+  useEffect(() => {
+    if (cooldown <= 0) return undefined;
+    const t = setInterval(() => setCooldown((c) => Math.max(0, c - 1)), 1000);
+    return () => clearInterval(t);
+  }, [cooldown]);
 
   const handleChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value
-    });
+    setFormData({ ...formData, [e.target.name]: e.target.value });
     setError('');
+  };
+
+  const switchMode = (toLogin) => {
+    if (toLogin === isLogin) return;
+    setIsLogin(toLogin);
+    setError('');
+    setFormData((f) => ({ name: '', email: f.email, password: '' }));
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setLoading(true);
     setError('');
 
-    try {
-      let response;
-      if (isLogin) {
-        response = await login({
-          email: formData.email,
-          password: formData.password
-        });
-      } else {
-        response = await register({
-          name: formData.name,
-          email: formData.email,
-          password: formData.password
-        });
+    if (!isLogin) {
+      if (formData.name.trim().length < 2) {
+        setError('Tell us your name (at least 2 characters).');
+        return;
       }
+      if (!passwordOk) {
+        setError('Use at least 8 characters with both letters and numbers.');
+        return;
+      }
+    }
 
-      if (response.data.success) {
-        // Store user data AND JWT token in localStorage
-        const user = response.data.user;
-        const token = response.data.token;
-        
-        localStorage.setItem('user', JSON.stringify(user));
-        localStorage.setItem('token', token);
-        
-        console.log('✅ Login successful! User:', user.name, 'Role:', user.role);
-        console.log('✅ JWT Token stored in localStorage');
-        
-        // Redirect based on user role
-        if (user.role === 'admin') {
-          // Admin goes directly to admin dashboard
-          navigate('/admin-upload');
-        } else {
-          // Students go to Student Dashboard
-          const from = location.state?.from || '/dashboard';
-          navigate(from);
+    setLoading(true);
+    try {
+      const response = isLogin
+        ? await login({ email: formData.email, password: formData.password })
+        : await register({ name: formData.name.trim(), email: formData.email, password: formData.password });
+
+      const { user, token } = response.data;
+      localStorage.setItem('user', JSON.stringify(user));
+      localStorage.setItem('token', token);
+      setFails(0);
+      toast.success(isLogin ? `Welcome back, ${user.name.split(' ')[0]}.` : 'Account created. Welcome aboard!');
+
+      if (user.role === 'admin') {
+        navigate('/admin-upload');
+      } else {
+        navigate(location.state?.from || '/dashboard');
+      }
+    } catch (err) {
+      const status = err.response?.status;
+      setError(err.response?.data?.message || 'Something went wrong. Please try again.');
+      if (isLogin && status === 401) {
+        const n = fails + 1;
+        setFails(n);
+        if (n >= MAX_FAILS) {
+          setCooldown(COOLDOWN_SECONDS);
+          setFails(0);
         }
       }
-    } catch (error) {
-      console.error('Auth error:', error);
-      setError(error.response?.data?.message || 'Authentication failed. Please try again.');
     } finally {
       setLoading(false);
     }
   };
 
+  const goingToPayment = location.state?.from?.startsWith('/payment');
+  const locked = loading || cooldown > 0;
+
   return (
     <div className="auth-page">
-      <div className="auth-container">
-        {/* Left Side - Image */}
-        <div className="auth-left">
-          <div className="auth-image-wrapper">
-            <img 
-              src="https://media.istockphoto.com/id/932822684/photo/college-students.jpg?s=612x612&w=0&k=20&c=SJfUDXioFHFGBn72EXX46-MDxKSQVdU7qqfLc42jEUQ=" 
-              alt="Student with thumbs up" 
-              className="auth-student-image"
-            />
-            <div className="auth-wings-bg"></div>
-          </div>
+      <header className="auth-top">
+        <Link to="/" className="auth-top__brand" aria-label={`${BRAND.name} home`}>
+          <Logo />
+        </Link>
+        <div className="auth-top__tools">
+          <ThemeToggle />
+          <Link to="/" className="auth-top__back">← Home</Link>
         </div>
+      </header>
 
-        {/* Right Side - Form */}
-        <div className="auth-right">
-          <div className="auth-form-container">
-            {/* Logo */}
-            <div className="auth-logo mb-4">
-              <img src={logo} alt="Imarticus Learning" style={{height: '60px'}} />
+      <main className="auth-grid">
+        <section className="auth-statement">
+          <p className="edu-label edu-label--accent">Members area</p>
+          <h1 className="edu-display auth-statement__title">
+            The work<br />is waiting.<br /><em>So is your mentor.</em>
+          </h1>
+
+          <ol className="auth-facts">
+            <li>
+              <span className="auth-facts__num">01</span>
+              <span>One account for your lessons, progress, quizzes and certificates.</span>
+            </li>
+            <li>
+              <span className="auth-facts__num">02</span>
+              <span>Pick up where you left off, on any device.</span>
+            </li>
+            <li>
+              <span className="auth-facts__num">03</span>
+              <span>No newsletters you didn't ask for.</span>
+            </li>
+          </ol>
+        </section>
+
+        <div className="auth-form-col">
+          <div className="edu-pop auth-card">
+            <div className="auth-tabs" role="tablist" aria-label="Account">
+              <button
+                type="button"
+                role="tab"
+                aria-selected={isLogin}
+                className={`auth-tab${isLogin ? ' is-active' : ''}`}
+                onClick={() => switchMode(true)}
+              >
+                <span className="auth-tab__num">A</span> Log in
+              </button>
+              <button
+                type="button"
+                role="tab"
+                aria-selected={!isLogin}
+                className={`auth-tab${!isLogin ? ' is-active' : ''}`}
+                onClick={() => switchMode(false)}
+              >
+                <span className="auth-tab__num">B</span> Create account
+              </button>
             </div>
 
-            <h2 className="auth-heading mb-4">{isLogin ? 'Log In' : 'Sign Up'}</h2>
+            <header className="auth-form-head">
+              <h2 className="edu-h2 auth-form-head__title">
+                {isLogin ? <>Welcome <em>back.</em></> : <>Get <em>enrolled.</em></>}
+              </h2>
+              <p className="auth-form-head__sub">
+                {goingToPayment
+                  ? 'Sign in first — we\'ll take you straight to checkout after.'
+                  : isLogin
+                    ? 'Use the email you signed up with.'
+                    : 'Takes about thirty seconds. No card needed.'}
+              </p>
+            </header>
 
             {error && (
-              <div className="alert alert-danger" role="alert">
-                {error}
+              <div className="edu-alert edu-alert--error auth-alert" role="alert">
+                <strong>Hmm.</strong>
+                <span>{error}</span>
+              </div>
+            )}
+            {cooldown > 0 && (
+              <div className="edu-alert auth-alert" role="status">
+                <span>Too many failed attempts. Try again in {cooldown}s — or contact support.</span>
               </div>
             )}
 
-            <form onSubmit={handleSubmit}>
+            <form onSubmit={handleSubmit} className="auth-form">
               {!isLogin && (
-                <div className="mb-3">
+                <div className="edu-field">
+                  <label htmlFor="name">Full name</label>
                   <input
                     type="text"
-                    className="form-control auth-input"
+                    className="edu-input"
                     id="name"
                     name="name"
                     value={formData.name}
                     onChange={handleChange}
-                    required={!isLogin}
-                    placeholder="Enter your Full Name"
+                    required
+                    maxLength={80}
+                    autoComplete="name"
+                    placeholder="Asha Menon"
                   />
                 </div>
               )}
 
-              <div className="mb-3">
+              <div className="edu-field">
+                <label htmlFor="email">Email</label>
                 <input
                   type="email"
-                  className="form-control auth-input"
+                  className="edu-input"
                   id="email"
                   name="email"
                   value={formData.email}
                   onChange={handleChange}
                   required
-                  placeholder="Enter your Email here"
+                  autoComplete="email"
+                  placeholder="you@example.com"
                 />
               </div>
 
-              <div className="mb-3 position-relative">
-                <input
-                  type="password"
-                  className="form-control auth-input"
-                  id="password"
-                  name="password"
-                  value={formData.password}
-                  onChange={handleChange}
-                  required
-                  placeholder="Enter your password here"
-                  minLength="6"
-                />
-                <span className="password-toggle">
-                  <i className="bi bi-eye"></i>
-                </span>
-              </div>
-
-              {isLogin && (
-                <div className="d-flex justify-content-between align-items-center mb-3">
-                  <a href="#" className="auth-link text-success">Login With OTP</a>
-                  <a href="#" className="auth-link text-success">Forgot Password ?</a>
+              <div className="edu-field">
+                <div className="auth-field-row">
+                  <label htmlFor="password">Password</label>
+                  {isLogin ? (
+                    <Link to="/support" state={{ topic: 'account' }} className="auth-forgot">
+                      Forgot password?
+                    </Link>
+                  ) : (
+                    <span className="auth-hint">8+ chars, letters & numbers</span>
+                  )}
                 </div>
-              )}
+                <div className="auth-password">
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    className="edu-input"
+                    id="password"
+                    name="password"
+                    value={formData.password}
+                    onChange={handleChange}
+                    required
+                    autoComplete={isLogin ? 'current-password' : 'new-password'}
+                    placeholder="••••••••"
+                    minLength={isLogin ? undefined : 8}
+                  />
+                  <button
+                    type="button"
+                    className="auth-password__toggle"
+                    onClick={() => setShowPassword(!showPassword)}
+                    aria-label={showPassword ? 'Hide password' : 'Show password'}
+                  >
+                    {showPassword ? 'Hide' : 'Show'}
+                  </button>
+                </div>
+
+                {!isLogin && formData.password && (
+                  <div className={`auth-strength auth-strength--${score}`} aria-live="polite">
+                    <div className="auth-strength__bars" aria-hidden="true">
+                      {[1, 2, 3, 4].map((i) => <span key={i} className={i <= score ? 'is-on' : ''} />)}
+                    </div>
+                    <span className="auth-strength__label">{STRENGTH_LABELS[score]}</span>
+                    <ul className="auth-strength__rules">
+                      <li className={checks.length ? 'is-ok' : ''}>8+ characters</li>
+                      <li className={checks.letter ? 'is-ok' : ''}>A letter</li>
+                      <li className={checks.number ? 'is-ok' : ''}>A number</li>
+                    </ul>
+                  </div>
+                )}
+              </div>
 
               <button
                 type="submit"
-                className="btn btn-success auth-submit-btn w-100 mb-3"
-                disabled={loading}
+                className="edu-btn edu-btn--accent edu-btn--lg edu-btn--block auth-submit"
+                disabled={locked || (!isLogin && Boolean(formData.password) && !passwordOk)}
               >
                 {loading ? (
                   <>
-                    <span className="spinner-border spinner-border-sm me-2"></span>
-                    {isLogin ? 'Logging in...' : 'Creating account...'}
+                    <span className="auth-dot" aria-hidden="true" />
+                    {isLogin ? 'Logging in…' : 'Creating account…'}
                   </>
                 ) : (
-                  <>{isLogin ? 'Log In' : 'Sign Up'}</>
+                  <>{isLogin ? 'Log in' : 'Create account'} <span aria-hidden="true">→</span></>
                 )}
               </button>
-
-              <div className="auth-divider my-4">
-                <span>Or</span>
-              </div>
-
-              <button type="button" className="btn btn-outline-secondary auth-alt-btn w-100 mb-3">
-                <i className="bi bi-phone me-2"></i>
-                Log in with Mobile Number
-              </button>
-
-              <button type="button" className="btn btn-outline-secondary auth-alt-btn w-100 mb-3">
-                <i className="bi bi-person me-2"></i>
-                Log in with Username
-              </button>
-
-              <div className="row g-2 mb-4">
-                <div className="col-6">
-                  <button type="button" className="btn btn-outline-secondary auth-social-btn w-100">
-                    <img src="https://www.google.com/favicon.ico" alt="Google" className="me-2" style={{width: '20px'}} />
-                    Google
-                  </button>
-                </div>
-                <div className="col-6">
-                  <button type="button" className="btn btn-outline-primary auth-social-btn w-100">
-                    <i className="bi bi-facebook me-2"></i>
-                    Facebook
-                  </button>
-                </div>
-              </div>
-
-              <div className="text-center">
-                <span className="text-muted">
-                  {isLogin ? "Don't have an account? " : "Already have an account? "}
-                  <button
-                    type="button"
-                    className="btn btn-link p-0 text-success"
-                    onClick={() => {
-                      setIsLogin(!isLogin);
-                      setError('');
-                      setFormData({ name: '', email: '', password: '' });
-                    }}
-                  >
-                    {isLogin ? 'Sign up for free' : 'Log In'}
-                  </button>
-                </span>
-              </div>
-
-              <div className="text-center mt-3">
-                <button
-                  type="button"
-                  className="btn btn-link text-muted"
-                  onClick={() => navigate('/')}
-                >
-                  ← Back to Home
-                </button>
-              </div>
             </form>
+
+            <p className="auth-switch">
+              {isLogin ? 'New here? ' : 'Already have an account? '}
+              <button type="button" className="edu-link" onClick={() => switchMode(!isLogin)}>
+                {isLogin ? 'Create an account' : 'Log in instead'}
+              </button>
+            </p>
           </div>
+
         </div>
-      </div>
+      </main>
     </div>
   );
 };
